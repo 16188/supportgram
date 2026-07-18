@@ -365,7 +365,7 @@
       </div>
       <div id="sg-content"></div>
     `;
-    document.getElementById('sg-close-btn')?.addEventListener('click', togglePanel);
+    panel.querySelector('#sg-close-btn').addEventListener('click', togglePanel);
     document.body.appendChild(panel);
   }
 

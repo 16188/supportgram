@@ -20,6 +20,7 @@
     email: '',
     identified: false,
     accent: '#1E8FD5',
+    offset: 20,
     title: 'Contact Us',
     greeting: 'Let me know if you have any questions!',
     storageKey: null,      // JSON array of tokens
@@ -116,6 +117,12 @@
       state.accent = rawColor;
     }
 
+    // Bottom offset in px — lets host pages lift the widget above their own fixed UI.
+    const rawOffset = parseInt(settings.offset ?? script.getAttribute('data-offset') ?? '', 10);
+    if (Number.isFinite(rawOffset) && rawOffset >= 0 && rawOffset <= 500) {
+      state.offset = rawOffset;
+    }
+
     const title = String(settings.title || script.getAttribute('data-title') || '').trim();
     if (title) state.title = title.slice(0, 40);
     const greeting = String(settings.greeting || script.getAttribute('data-greeting') || '').trim();
@@ -145,7 +152,7 @@
       }
       .sg-launcher {
         position: fixed;
-        bottom: 20px;
+        bottom: ${state.offset}px;
         right: 20px;
         width: 56px;
         height: 56px;
@@ -186,7 +193,7 @@
       }
       .sg-teaser {
         position: fixed;
-        bottom: 88px;
+        bottom: ${state.offset + 68}px;
         right: 20px;
         width: 280px;
         background: white;
@@ -222,7 +229,7 @@
       .sg-teaser-btn.secondary { background: #e5e7eb; color: #333; }
       .sg-panel {
         position: fixed;
-        bottom: 88px;
+        bottom: ${state.offset + 68}px;
         right: 20px;
         width: 360px;
         max-height: 600px;
@@ -563,6 +570,31 @@
 
   /* ---------------- teaser (proactive greeting) ---------------- */
 
+  // Soft two-note chime, synthesized (no audio asset). Best-effort: browsers
+  // block audio until the visitor has interacted with the page at least once.
+  function playChime() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      if (ctx.state === 'suspended') { ctx.close(); return; }
+      const gain = ctx.createGain();
+      gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45);
+      [[880, 0], [1174.7, 0.12]].forEach(([freq, delay]) => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.35);
+      });
+      setTimeout(() => ctx.close(), 700);
+    } catch { /* never let sound break the widget */ }
+  }
+
   // '1' = engaged, never show again; a numeric value = snoozed until that epoch-ms.
   function teaserDismissed() {
     try {
@@ -621,6 +653,7 @@
       badge.textContent = '1';
       badge.classList.remove('hidden');
     }
+    playChime();
   }
 
   /* ---------------- views ---------------- */

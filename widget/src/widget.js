@@ -19,6 +19,7 @@
     name: '',
     email: '',
     identified: false,
+    hmac: null,
     accent: '#1E8FD5',
     offset: 20,
     title: 'Contact Us',
@@ -109,6 +110,8 @@
       state.name = knownName;
       state.email = knownEmail;
       state.identified = true;
+      const hmac = String(settings.hmac || script.getAttribute('data-hmac') || '').trim();
+      if (/^[0-9a-f]{64}$/i.test(hmac)) state.hmac = hmac;
     }
 
     // Brand accent color (hex only; anything else falls back to the default).
@@ -138,6 +141,48 @@
 
     log('Initialized with key:', state.key, 'api base:', state.apiBase);
     return true;
+  }
+
+  // Runtime identity switch — host apps call this on login/logout (SPA navigation
+  // never reloads the script, so init-time identity alone would go stale).
+  function applyIdentity(identity) {
+    stopPolling();
+    state.token = null;
+    state.messages = [];
+    state.lastMessageId = null;
+    state.conversationStatus = 'open';
+    state.unreadCount = 0;
+
+    const name = String(identity?.name || '').trim();
+    const email = String(identity?.email || '').trim();
+    if (name && email.includes('@')) {
+      state.name = name;
+      state.email = email;
+      state.identified = true;
+      const hmac = String(identity?.hmac || '').trim();
+      state.hmac = /^[0-9a-f]{64}$/i.test(hmac) ? hmac : null;
+    } else {
+      state.name = '';
+      state.email = '';
+      state.identified = false;
+      state.hmac = null;
+    }
+
+    const suffix = state.identified ? `_${identityHash(state.email)}` : '';
+    state.storageKey = `sg_convs_${state.key}${suffix}`;
+    state.tokens = loadTokens();
+    saveTokens();
+
+    state.view = 'home';
+    updateBadge();
+    if (state.isOpen) renderView();
+
+    // Resume background unread polling on this identity's latest conversation.
+    if (state.tokens.length > 0) {
+      state.token = state.tokens[state.tokens.length - 1];
+      fetchMessages();
+      startPolling();
+    }
   }
 
   function injectStyles() {
@@ -695,9 +740,28 @@
     `;
     content.querySelector('#sg-newmsg').addEventListener('click', startNewConversation);
 
-    if (state.tokens.length > 0) {
+    // Verified users may have server-side conversations even with no local tokens.
+    if (state.tokens.length > 0 || (state.identified && state.hmac)) {
       renderRecentList();
     }
+  }
+
+  function recentItem(card, token, preview, time) {
+    const item = document.createElement('button');
+    item.className = 'sg-recent-item';
+    item.innerHTML = `
+      <div class="sg-recent-avatar">${(state.title[0] || '?').toUpperCase()}</div>
+      <div class="sg-recent-main">
+        <div class="sg-recent-name"></div>
+        <div class="sg-recent-preview"></div>
+      </div>
+      <div class="sg-recent-time"></div>
+    `;
+    item.querySelector('.sg-recent-name').textContent = state.title;
+    item.querySelector('.sg-recent-preview').textContent = preview;
+    item.querySelector('.sg-recent-time').textContent = time;
+    item.addEventListener('click', () => openConversation(token));
+    card.appendChild(item);
   }
 
   async function renderRecentList() {
@@ -708,7 +772,44 @@
     card.innerHTML = '<div class="sg-recent-title">Recent Conversations</div>';
     wrap.replaceChildren(card);
 
-    // newest first
+    // Verified identity: one server call lists conversations for this email across
+    // all devices. Also refresh the local token list from it.
+    if (state.identified && state.hmac) {
+      try {
+        const u = new URL(`${state.apiBase}/api/conversations`);
+        u.searchParams.set('key', state.key);
+        u.searchParams.set('email', state.email);
+        u.searchParams.set('sig', state.hmac);
+        const resp = await fetch(u.toString());
+        if (resp.ok) {
+          const data = await resp.json();
+          if (Array.isArray(data.conversations)) {
+            state.tokens = data.conversations.map((c) => c.token).reverse(); // store oldest-first
+            saveTokens();
+            if (data.conversations.length === 0) {
+              wrap.replaceChildren();
+              return;
+            }
+            data.conversations.forEach((c) => {
+              recentItem(
+                card,
+                c.token,
+                c.last_body || (c.status === 'closed' ? 'Conversation ended' : 'New conversation'),
+                c.last_at ? formatTime(c.last_at) : ''
+              );
+            });
+            return;
+          }
+        }
+      } catch { /* fall back to local tokens below */ }
+    }
+
+    if (state.tokens.length === 0) {
+      wrap.replaceChildren();
+      return;
+    }
+
+    // Local fallback: one fetch per stored token, newest first.
     const tokens = [...state.tokens].reverse();
     for (const token of tokens) {
       try {
@@ -722,24 +823,12 @@
         const data = await resp.json();
         const msgs = data.messages || [];
         const last = msgs[msgs.length - 1];
-
-        const item = document.createElement('button');
-        item.className = 'sg-recent-item';
-        item.innerHTML = `
-          <div class="sg-recent-avatar">${(state.title[0] || '?').toUpperCase()}</div>
-          <div class="sg-recent-main">
-            <div class="sg-recent-name"></div>
-            <div class="sg-recent-preview"></div>
-          </div>
-          <div class="sg-recent-time"></div>
-        `;
-        item.querySelector('.sg-recent-name').textContent = state.title;
-        item.querySelector('.sg-recent-preview').textContent = last
-          ? last.body
-          : (data.status === 'closed' ? 'Conversation ended' : 'New conversation');
-        item.querySelector('.sg-recent-time').textContent = last ? formatTime(last.at) : '';
-        item.addEventListener('click', () => openConversation(token));
-        card.appendChild(item);
+        recentItem(
+          card,
+          token,
+          last ? last.body : (data.status === 'closed' ? 'Conversation ended' : 'New conversation'),
+          last ? formatTime(last.at) : ''
+        );
       } catch { /* skip unreachable conversations */ }
     }
   }
@@ -1147,6 +1236,12 @@
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     setTimeout(maybeShowTeaser, 2500);
+
+    // Public runtime API for host apps (login/logout without a page reload).
+    window.Supportgram = {
+      identify(identity) { applyIdentity(identity); },
+      reset() { applyIdentity(null); },
+    };
   }
 
   if (document.readyState === 'loading') {

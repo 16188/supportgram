@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { createClient } from '@libsql/client';
 import { config } from '../config.js';
-import { statements } from './schema.js';
+import { statements, migrations } from './schema.js';
 
 // For local file databases, make sure the directory exists before libsql opens it.
 if (config.TURSO_DATABASE_URL.startsWith('file:')) {
@@ -19,6 +19,13 @@ export const client = createClient({
 export async function initSchema() {
   for (const sql of statements) {
     await client.execute(sql);
+  }
+  for (const sql of migrations) {
+    try {
+      await client.execute(sql);
+    } catch (err) {
+      if (!/duplicate column/i.test(err.message || '')) throw err;
+    }
   }
 }
 
@@ -59,6 +66,20 @@ export async function getBusiness(id) {
 
 export async function getBusinessByKey(public_key) {
   return firstRow(await q('SELECT * FROM businesses WHERE public_key = ?', [public_key]));
+}
+
+// Verified-identity conversation list: newest first, with a one-line preview each.
+export async function listConversationsByEmail(businessId, email, limit = 20) {
+  return toObjects(await q(
+    `SELECT c.resume_token AS token, c.status, c.last_activity_at,
+            (SELECT body FROM messages WHERE conversation_id = c.id AND direction != 'note' ORDER BY id DESC LIMIT 1) AS last_body,
+            (SELECT created_at FROM messages WHERE conversation_id = c.id AND direction != 'note' ORDER BY id DESC LIMIT 1) AS last_at
+     FROM conversations c
+     WHERE c.business_id = ? AND lower(c.customer_email) = lower(?)
+     ORDER BY c.last_activity_at DESC
+     LIMIT ?`,
+    [businessId, email, limit]
+  ));
 }
 
 export async function getActiveAgents(businessId) {

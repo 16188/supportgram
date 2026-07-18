@@ -1,8 +1,24 @@
 // POST /api/conversations — start a new conversation from the widget.
+// GET  /api/conversations?key&email&sig — verified-identity conversation list.
 
 import crypto from 'crypto';
-import { getBusinessByKey, countRecentConversationsByIp } from '../db/index.js';
+import { getBusinessByKey, countRecentConversationsByIp, listConversationsByEmail } from '../db/index.js';
 import { startConversation } from '../lib/relay.js';
+
+// sig must be HMAC-SHA256(identity_secret, lowercase(email)) as hex — computed by the
+// tenant's own backend, proving the page didn't just claim an arbitrary email.
+function verifyIdentitySig(business, email, sig) {
+  if (!business.identity_secret || !sig) return false;
+  const expected = crypto
+    .createHmac('sha256', business.identity_secret)
+    .update(String(email).trim().toLowerCase())
+    .digest('hex');
+  try {
+    return crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(String(sig), 'hex'));
+  } catch {
+    return false;
+  }
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -31,10 +47,34 @@ export default async function handler(req, res) {
       res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
       res.setHeader('Vary', 'Origin');
     }
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Access-Control-Max-Age', '86400');
     return res.status(204).end();
+  }
+
+  if (req.method === 'GET') {
+    const { key, email, sig } = req.query || {};
+    if (!key) return res.status(400).json({ error: 'missing key' });
+
+    const business = await getBusinessByKey(key);
+    if (!business) return res.status(404).json({ error: 'unknown key' });
+    if (!enforceOrigin(req, res, business)) return;
+
+    if (!email || !EMAIL_RE.test(String(email).trim())) {
+      return res.status(400).json({ error: 'valid email is required' });
+    }
+    if (!verifyIdentitySig(business, email, sig)) {
+      return res.status(401).json({ error: 'identity signature invalid' });
+    }
+
+    try {
+      const conversations = await listConversationsByEmail(business.id, String(email).trim());
+      return res.status(200).json({ conversations });
+    } catch (err) {
+      console.error('conversations: list failed:', err);
+      return res.status(500).json({ error: 'internal error' });
+    }
   }
 
   if (req.method !== 'POST') {

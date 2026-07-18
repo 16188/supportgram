@@ -76,6 +76,7 @@ if (!flags.name || !flags['bot-token'] || !flags.supergroup || !flags.origins) {
 // Generate public key + webhook secret
 const publicKey = 'pk_' + crypto.randomBytes(12).toString('hex');
 const webhookSecret = crypto.randomBytes(16).toString('hex');
+const identitySecret = crypto.randomBytes(24).toString('hex');
 
 // Parse origins
 const origins = flags.origins.split(',').map((o) => o.trim());
@@ -83,9 +84,9 @@ const originAllowlist = JSON.stringify(origins);
 
 // Insert business
 const bizResult = await client.execute({
-  sql: `INSERT INTO businesses (name, public_key, bot_token, supergroup_id, webhook_secret, origin_allowlist)
-        VALUES (?, ?, ?, ?, ?, ?)`,
-  args: [flags.name, publicKey, flags['bot-token'], parseInt(flags.supergroup, 10), webhookSecret, originAllowlist],
+  sql: `INSERT INTO businesses (name, public_key, bot_token, supergroup_id, webhook_secret, origin_allowlist, identity_secret)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  args: [flags.name, publicKey, flags['bot-token'], parseInt(flags.supergroup, 10), webhookSecret, originAllowlist, identitySecret],
 });
 const businessId = Number(bizResult.lastInsertRowid);
 
@@ -93,6 +94,7 @@ console.log(`Created business: ${flags.name}`);
 console.log(`  ID: ${businessId}`);
 console.log(`  Public Key: ${publicKey}`);
 console.log(`  Webhook Secret: ${webhookSecret}`);
+console.log(`  Identity Secret: ${identitySecret}  (share with the tenant's backend for verified identity)`);
 
 // Insert agents if provided
 if (flags.agents) {

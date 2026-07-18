@@ -8,6 +8,7 @@ export const statements = [
     supergroup_id INTEGER NOT NULL,
     webhook_secret TEXT NOT NULL,
     origin_allowlist TEXT NOT NULL DEFAULT '[]',
+    identity_secret TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   )`,
 
@@ -50,7 +51,14 @@ export const statements = [
   )`,
 
   `CREATE INDEX IF NOT EXISTS idx_conversations_resume_token ON conversations(resume_token)`,
+  `CREATE INDEX IF NOT EXISTS idx_conversations_business_email ON conversations(business_id, customer_email)`,
   `CREATE INDEX IF NOT EXISTS idx_conversations_business_topic ON conversations(business_id, topic_id)`,
   `CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id)`,
   `CREATE INDEX IF NOT EXISTS idx_agents_business_active ON agents(business_id, active)`,
+];
+
+// Additive migrations for databases created before these columns existed.
+// "duplicate column" errors are expected and ignored by the runner.
+export const migrations = [
+  `ALTER TABLE businesses ADD COLUMN identity_secret TEXT`,
 ];

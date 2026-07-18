@@ -3,7 +3,7 @@
 import crypto from 'crypto';
 import { config } from '../config.js';
 import client, { initSchema } from '../db/index.js';
-import { setWebhook } from '../lib/telegramApi.js';
+import { setWebhook, setMyCommands } from '../lib/telegramApi.js';
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
@@ -126,6 +126,14 @@ if (config.BASE_URL.startsWith('https://')) {
 } else {
   console.log(`  Skipping setWebhook — BASE_URL is not https (${config.BASE_URL}).`);
   console.log(`  When deployed, register: ${webhookUrl} with secret_token=${webhookSecret}`);
+}
+
+// Register agent commands for the "/" autocomplete menu
+try {
+  await setMyCommands(flags['bot-token']);
+  console.log('  Agent commands registered (/close, /note)');
+} catch (err) {
+  console.error(`  setMyCommands FAILED: ${err.message}`);
 }
 
 console.log('\nBusiness created successfully.');

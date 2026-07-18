@@ -45,8 +45,29 @@ For visitors you've already identified (logged-in users), pass their identity an
 <script src="https://supportgram.vercel.app/widget.js" data-key="YOUR_PUBLIC_KEY"></script>
 ```
 
+## Tenant administration (CLI)
+
+There is no admin panel in the POC — tenants are managed with the seed CLI (run from the repo with a configured `.env`):
+
+```bash
+# List all tenants: public key, bot, supergroup, origins, agents
+npm run seed -- --list
+
+# Create a tenant (also registers the Telegram webhook when BASE_URL is https)
+npm run seed -- \
+  --name "Acme Corp" \
+  --bot-token "123456:ABC..." \
+  --supergroup -100123456789 \
+  --origins "https://acme.com,https://www.acme.com" \
+  --agents "123456:Alice:alice_tg,789012:Bob:"
+```
+
+- `--agents` format: `tg_user_id:DisplayName:tg_username` (username optional), comma-separated. Get a user's ID from the bot's `getUpdates` after they message the group.
+- The printed **Public Key** (`pk_…`) is what goes in the widget's `data-key`.
+- Adding an agent to an existing tenant currently requires a manual `INSERT` into the `agents` table (CLI flag planned).
+
 ## Deploy
 
-Runs on Vercel (serverless functions + cron) with a [Turso](https://turso.tech) database. Set env vars in the Vercel project: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `BASE_URL`, `BREVO_API_KEY`, `CRON_SECRET`. Local development needs no cloud database — the default `TURSO_DATABASE_URL=file:data/local.db` uses a local file.
+Runs on Vercel (serverless functions + cron) with a [Turso](https://turso.tech) database. Set env vars in the Vercel project: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `BASE_URL`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `CRON_SECRET`. Local development needs no cloud database — the default `TURSO_DATABASE_URL=file:data/local.db` uses a local file.
 
 For full architecture and specification details, see [`docs/SPEC.md`](./docs/SPEC.md).

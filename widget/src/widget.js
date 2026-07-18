@@ -64,6 +64,28 @@
     return null;
   }
 
+  // Once an anonymous visitor has introduced themselves, remember it — later
+  // conversations skip the pre-chat form just like identified visitors.
+  function contactKey() {
+    return `sg_contact_${state.key}`;
+  }
+
+  function saveContact(name, email) {
+    try { localStorage.setItem(contactKey(), JSON.stringify({ name, email })); } catch { /* ignore */ }
+  }
+
+  function loadContact() {
+    try {
+      const c = JSON.parse(localStorage.getItem(contactKey()) || 'null');
+      if (c && c.name && String(c.email || '').includes('@')) return c;
+    } catch { /* ignore */ }
+    return null;
+  }
+
+  function knowsContact() {
+    return !!(state.name && state.email.includes('@'));
+  }
+
   function saveTokens() {
     try { localStorage.setItem(state.storageKey, JSON.stringify(state.tokens)); } catch { /* ignore */ }
   }
@@ -112,6 +134,12 @@
       state.identified = true;
       const hmac = String(settings.hmac || script.getAttribute('data-hmac') || '').trim();
       if (/^[0-9a-f]{64}$/i.test(hmac)) state.hmac = hmac;
+    } else {
+      const saved = loadContact();
+      if (saved) {
+        state.name = saved.name;
+        state.email = saved.email;
+      }
     }
 
     // Brand accent color (hex only; anything else falls back to the default).
@@ -162,10 +190,11 @@
       const hmac = String(identity?.hmac || '').trim();
       state.hmac = /^[0-9a-f]{64}$/i.test(hmac) ? hmac : null;
     } else {
-      state.name = '';
-      state.email = '';
       state.identified = false;
       state.hmac = null;
+      const saved = loadContact();
+      state.name = saved ? saved.name : '';
+      state.email = saved ? saved.email : '';
     }
 
     const suffix = state.identified ? `_${identityHash(state.email)}` : '';
@@ -850,12 +879,9 @@
     state.messages = [];
     state.lastMessageId = null;
     state.conversationStatus = 'open';
-    if (state.identified) {
-      // Known visitor: no pre-chat form; conversation is created on first message.
-      state.view = 'chat';
-    } else {
-      state.view = 'form';
-    }
+    // Anyone we already know (identified, saved contact, or earlier form submit
+    // this session) goes straight to chat; the conversation is created on first send.
+    state.view = knowsContact() ? 'chat' : 'form';
     renderView();
   }
 
@@ -924,6 +950,7 @@
         const data = await response.json();
         state.name = name;
         state.email = email;
+        saveContact(name, email);
         state.conversationStatus = data.status || 'open';
         state.messages = [];
         state.lastMessageId = null;
@@ -1015,7 +1042,7 @@
     const text = textarea.value.trim();
 
     if (!text) return;
-    if (!state.token && !state.identified) return;
+    if (!state.token && !knowsContact()) return;
 
     textarea.value = '';
     textarea.style.height = 'auto';

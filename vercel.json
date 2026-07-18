@@ -1,4 +1,6 @@
 {
+  "buildCommand": "node widget/build.mjs",
+  "outputDirectory": "public",
   "crons": [
     { "path": "/api/cron/purge", "schedule": "0 8 * * *" }
   ],

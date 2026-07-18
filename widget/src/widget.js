@@ -39,6 +39,16 @@
     }
   }
 
+  // Stable short hash so identified users get their own token slot (no plaintext email in storage keys).
+  function identityHash(email) {
+    const s = String(email).trim().toLowerCase();
+    let h = 5381;
+    for (let i = 0; i < s.length; i++) {
+      h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+    }
+    return h.toString(36);
+  }
+
   function findScriptTag() {
     if (document.currentScript) {
       return document.currentScript;
@@ -70,10 +80,6 @@
     const url = new URL(script.src);
     state.apiBase = url.origin;
 
-    // Try to restore token from localStorage
-    const storageKey = `sg_token_${state.key}`;
-    state.token = localStorage.getItem(storageKey);
-
     // Known-visitor identity: window.SupportgramSettings wins over script data attributes.
     const settings = (typeof window !== 'undefined' && window.SupportgramSettings) || {};
     const knownName = String(settings.name || script.getAttribute('data-name') || '').trim();
@@ -83,6 +89,14 @@
       state.email = knownEmail;
       state.identified = true;
     }
+
+    // Conversations are scoped per identity: anonymous visitors share the browser slot,
+    // each identified user (by email) gets their own — logging in never shows the
+    // anonymous conversation, and different users on one device don't see each other's.
+    state.storageKey = state.identified
+      ? `sg_token_${state.key}_${identityHash(state.email)}`
+      : `sg_token_${state.key}`;
+    state.token = localStorage.getItem(state.storageKey);
 
     // Brand accent color (hex only; anything else falls back to the default).
     const rawColor = String(settings.color || script.getAttribute('data-color') || '').trim();
@@ -461,8 +475,7 @@
         state.lastMessageId = null;
         state.unreadCount = 0;
 
-        const storageKey = `sg_token_${state.key}`;
-        localStorage.setItem(storageKey, state.token);
+        localStorage.setItem(state.storageKey, state.token);
 
         showChat();
         startPolling();
@@ -587,7 +600,7 @@
         const data = await response.json();
         state.token = data.token;
         state.conversationStatus = data.status || 'open';
-        localStorage.setItem(`sg_token_${state.key}`, state.token);
+        localStorage.setItem(state.storageKey, state.token);
         startPolling();
       } catch (err) {
         warn('Error starting conversation:', err);
@@ -636,8 +649,7 @@
 
       if (response.status === 404) {
         // Token invalid; clear and reset
-        const storageKey = `sg_token_${state.key}`;
-        localStorage.removeItem(storageKey);
+        localStorage.removeItem(state.storageKey);
         state.token = null;
         state.messages = [];
         state.lastMessageId = null;

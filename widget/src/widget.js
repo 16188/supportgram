@@ -9,6 +9,7 @@
     token: null,           // active conversation
     messages: [],
     lastMessageId: null,
+    renderedCount: 0,
     conversationStatus: 'open',
     pollingInterval: null,
     pollingRate: 3000,     // 3s when chat open
@@ -510,84 +511,145 @@
       .sg-messages {
         flex: 1;
         overflow-y: auto;
-        padding: 12px 16px;
+        padding: 16px 14px 12px;
         display: flex;
         flex-direction: column;
-        gap: 8px;
         min-height: 0;
+        background: #f5f6f8;
       }
       .sg-message {
         display: flex;
-        flex-direction: column;
-        max-width: 90%;
+        align-items: flex-end;
+        gap: 8px;
+        max-width: 82%;
+        margin-top: 3px;
       }
-      .sg-message.sg-message-in { align-self: flex-end; }
+      .sg-message.sg-group-start { margin-top: 14px; }
+      .sg-message.sg-message-in { align-self: flex-end; flex-direction: row-reverse; }
       .sg-message.sg-message-out { align-self: flex-start; }
+      @keyframes sg-pop {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: none; }
+      }
+      .sg-message.sg-anim { animation: sg-pop 0.18s ease-out; }
+      @media (prefers-reduced-motion: reduce) { .sg-message.sg-anim { animation: none; } }
+      .sg-msg-avatar {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--sg-accent);
+        color: white;
+        font-weight: 700;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 26px;
+      }
+      .sg-msg-avatar.sg-spacer { visibility: hidden; }
+      .sg-msg-col { display: flex; flex-direction: column; min-width: 0; }
       .sg-message-bubble {
-        padding: 8px 12px;
-        border-radius: 8px;
+        padding: 9px 13px;
+        border-radius: 16px;
         word-wrap: break-word;
+        overflow-wrap: anywhere;
         font-size: 14px;
-        line-height: 1.4;
+        line-height: 1.45;
+        box-shadow: 0 1px 1px rgba(16, 24, 40, 0.05);
       }
       .sg-message-in .sg-message-bubble {
         background-color: var(--sg-accent);
         color: white;
       }
+      .sg-message-in.sg-group-end .sg-message-bubble { border-bottom-right-radius: 5px; }
       .sg-message-out .sg-message-bubble {
-        background-color: #e5e7eb;
-        color: #333;
+        background-color: #ffffff;
+        color: #1f2733;
+        border: 1px solid #e8eaee;
       }
+      .sg-message-out.sg-group-end .sg-message-bubble { border-bottom-left-radius: 5px; }
       .sg-message-sender {
-        font-size: 12px;
-        color: #999;
-        margin-bottom: 2px;
-        padding-left: 4px;
+        font-size: 11.5px;
+        font-weight: 600;
+        color: #8a919c;
+        margin: 0 0 3px 4px;
       }
+      .sg-message-time {
+        font-size: 10.5px;
+        color: #a5abb5;
+        margin-top: 3px;
+      }
+      .sg-message-in .sg-message-time { text-align: right; margin-right: 4px; }
+      .sg-message-out .sg-message-time { margin-left: 4px; }
       .sg-divider {
-        text-align: center;
-        font-size: 12px;
-        color: #999;
-        padding: 8px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 11.5px;
+        color: #a5abb5;
+        margin: 16px 0 4px;
+      }
+      .sg-divider::before, .sg-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: #e3e6ea;
       }
       .sg-input-row {
-        padding: 12px 16px;
-        border-top: 1px solid #e5e7eb;
+        padding: 10px 12px;
+        border-top: 1px solid #eceef1;
         display: flex;
         gap: 8px;
         align-items: flex-end;
         flex: 0 0 auto;
+        background: white;
+      }
+      .sg-input-shell {
+        flex: 1;
+        display: flex;
+        align-items: flex-end;
+        background: #f2f3f5;
+        border: 1px solid transparent;
+        border-radius: 20px;
+        padding: 4px 6px 4px 14px;
+        transition: border-color 0.15s, background 0.15s;
+      }
+      .sg-input-shell:focus-within {
+        background: white;
+        border-color: var(--sg-accent);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--sg-accent) 10%, transparent);
       }
       .sg-input-row-textarea {
         flex: 1;
-        min-height: 32px;
+        min-height: 26px;
         max-height: 100px;
-        padding: 8px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
+        padding: 5px 0;
+        border: none;
+        background: transparent;
         font-family: inherit;
         font-size: 14px;
         resize: none;
-        transition: border-color 0.2s;
       }
-      .sg-input-row-textarea:focus {
-        outline: none;
-        border-color: var(--sg-accent);
-      }
+      .sg-input-row-textarea:focus { outline: none; }
       .sg-send-btn {
-        padding: 6px 12px;
+        width: 36px;
+        height: 36px;
+        flex: 0 0 36px;
         background-color: var(--sg-accent);
         color: white;
         border: none;
-        border-radius: 6px;
+        border-radius: 50%;
         cursor: pointer;
-        font-weight: 600;
-        font-size: 14px;
-        white-space: nowrap;
-        transition: filter 0.15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: filter 0.15s, transform 0.1s;
+        padding: 0;
       }
       .sg-send-btn:hover { filter: brightness(0.92); }
+      .sg-send-btn:active { transform: scale(0.94); }
       .sg-send-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+      .sg-send-btn svg { margin-left: 2px; }
       .sg-error {
         color: #dc2626;
         font-size: 13px;
@@ -980,10 +1042,15 @@
     content.innerHTML = `
       <div class="sg-messages" id="sg-messages"></div>
       <div class="sg-input-row">
-        <textarea class="sg-input-row-textarea" id="sg-input" placeholder="Type a message..."></textarea>
-        <button class="sg-send-btn" id="sg-send">Send</button>
+        <div class="sg-input-shell">
+          <textarea class="sg-input-row-textarea" id="sg-input" rows="1" placeholder="Type a message..."></textarea>
+        </div>
+        <button class="sg-send-btn" id="sg-send" aria-label="Send">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M2.7 20.9l18.6-8.4c.8-.4.8-1.5 0-1.9L2.7 2.2c-.7-.3-1.4.3-1.2 1l1.9 7.6c.1.3.3.5.6.6l8.2.9c.3 0 .3.5 0 .5l-8.2.9c-.3 0-.5.3-.6.6l-1.9 7.6c-.2.7.5 1.3 1.2 1z"/></svg>
+        </button>
       </div>
     `;
+    state.renderedCount = 0;
 
     const textarea = document.getElementById('sg-input');
     const sendBtn = document.getElementById('sg-send');
@@ -1003,37 +1070,76 @@
     renderMessages();
   }
 
+  function msgTime(msg) {
+    const t = new Date(String(msg.at || '').includes('T') ? msg.at : msg.at + 'Z').getTime();
+    return isNaN(t) ? 0 : t;
+  }
+
   function renderMessages() {
     const messagesDiv = document.getElementById('sg-messages');
     if (!messagesDiv) return;
     messagesDiv.innerHTML = '';
 
-    state.messages.forEach((msg) => {
-      const msgEl = document.createElement('div');
-      const isOwn = msg.direction === 'in';
-      msgEl.className = `sg-message ${isOwn ? 'sg-message-in' : 'sg-message-out'}`;
+    const GROUP_GAP_MS = 5 * 60 * 1000;
+    const msgs = state.messages;
 
-      if (!isOwn && msg.sender) {
+    msgs.forEach((msg, i) => {
+      const isOwn = msg.direction === 'in';
+      const prev = msgs[i - 1];
+      const next = msgs[i + 1];
+      const groupStart = !prev || prev.direction !== msg.direction ||
+        (msgTime(msg) - msgTime(prev)) > GROUP_GAP_MS;
+      const groupEnd = !next || next.direction !== msg.direction ||
+        (msgTime(next) - msgTime(msg)) > GROUP_GAP_MS;
+
+      const msgEl = document.createElement('div');
+      msgEl.className = `sg-message ${isOwn ? 'sg-message-in' : 'sg-message-out'}` +
+        (groupStart ? ' sg-group-start' : '') +
+        (groupEnd ? ' sg-group-end' : '') +
+        (i >= state.renderedCount ? ' sg-anim' : '');
+
+      // Agent messages carry a small avatar on the last bubble of each group.
+      if (!isOwn) {
+        const avatar = document.createElement('div');
+        avatar.className = 'sg-msg-avatar' + (groupEnd ? '' : ' sg-spacer');
+        avatar.textContent = ((msg.sender || state.title)[0] || '?').toUpperCase();
+        msgEl.appendChild(avatar);
+      }
+
+      const col = document.createElement('div');
+      col.className = 'sg-msg-col';
+
+      if (!isOwn && msg.sender && groupStart) {
         const sender = document.createElement('div');
         sender.className = 'sg-message-sender';
         sender.textContent = msg.sender;
-        msgEl.appendChild(sender);
+        col.appendChild(sender);
       }
 
       const bubble = document.createElement('div');
       bubble.className = 'sg-message-bubble';
       bubble.textContent = msg.body;
-      msgEl.appendChild(bubble);
+      col.appendChild(bubble);
+
+      if (groupEnd && msg.at) {
+        const time = document.createElement('div');
+        time.className = 'sg-message-time';
+        time.textContent = formatTime(msg.at);
+        col.appendChild(time);
+      }
+
+      msgEl.appendChild(col);
       messagesDiv.appendChild(msgEl);
     });
 
-    if (state.conversationStatus === 'closed' && state.messages.length > 0) {
+    if (state.conversationStatus === 'closed' && msgs.length > 0) {
       const divider = document.createElement('div');
       divider.className = 'sg-divider';
       divider.textContent = 'Conversation ended — send a message to reopen';
       messagesDiv.appendChild(divider);
     }
 
+    state.renderedCount = msgs.length;
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
 

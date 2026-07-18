@@ -1,0 +1,21 @@
+{
+  "name": "supportgram",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Telegram live chat for your website",
+  "scripts": {
+    "dev": "vercel dev",
+    "build:widget": "node widget/build.mjs",
+    "seed": "node scripts/seed.mjs"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.15.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.11"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -563,12 +563,26 @@
 
   /* ---------------- teaser (proactive greeting) ---------------- */
 
+  // '1' = engaged, never show again; a numeric value = snoozed until that epoch-ms.
   function teaserDismissed() {
-    try { return localStorage.getItem(state.teaserKey) === '1'; } catch { return false; }
+    try {
+      if (sessionStorage.getItem(state.teaserKey) === '1') return true; // max once per session
+      const v = localStorage.getItem(state.teaserKey);
+      if (v === '1') return true;
+      if (v && Date.now() < Number(v)) return true;
+    } catch { /* ignore */ }
+    return false;
   }
 
-  function dismissTeaser() {
-    try { localStorage.setItem(state.teaserKey, '1'); } catch { /* ignore */ }
+  function dismissTeaser(permanent) {
+    try {
+      if (permanent) {
+        localStorage.setItem(state.teaserKey, '1');
+      } else {
+        // "No, thanks" — snooze for 7 days, then eligible again.
+        localStorage.setItem(state.teaserKey, String(Date.now() + 7 * 24 * 3600 * 1000));
+      }
+    } catch { /* ignore */ }
     if (state.teaserEl) {
       state.teaserEl.remove();
       state.teaserEl = null;
@@ -581,6 +595,7 @@
 
   function maybeShowTeaser() {
     if (teaserDismissed() || state.isOpen || state.tokens.length > 0) return;
+    try { sessionStorage.setItem(state.teaserKey, '1'); } catch { /* ignore */ }
 
     const teaser = document.createElement('div');
     teaser.className = 'sg-teaser';
@@ -593,11 +608,11 @@
     teaser.querySelector('.sg-teaser-title').textContent = state.title;
     teaser.querySelector('.sg-teaser-text').textContent = state.greeting;
     teaser.querySelector('#sg-teaser-yes').addEventListener('click', () => {
-      dismissTeaser();
+      dismissTeaser(true);
       if (!state.isOpen) togglePanel();
       startNewConversation();
     });
-    teaser.querySelector('#sg-teaser-no').addEventListener('click', dismissTeaser);
+    teaser.querySelector('#sg-teaser-no').addEventListener('click', () => dismissTeaser(false));
     document.body.appendChild(teaser);
     state.teaserEl = teaser;
 

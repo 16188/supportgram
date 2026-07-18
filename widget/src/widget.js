@@ -16,6 +16,7 @@
     isOpen: false,
     name: '',
     email: '',
+    identified: false,
   };
 
   // Utility functions
@@ -71,6 +72,16 @@
     // Try to restore token from localStorage
     const storageKey = `sg_token_${state.key}`;
     state.token = localStorage.getItem(storageKey);
+
+    // Known-visitor identity: window.SupportgramSettings wins over script data attributes.
+    const settings = (typeof window !== 'undefined' && window.SupportgramSettings) || {};
+    const knownName = String(settings.name || script.getAttribute('data-name') || '').trim();
+    const knownEmail = String(settings.email || script.getAttribute('data-email') || '').trim();
+    if (knownName && knownEmail.includes('@')) {
+      state.name = knownName;
+      state.email = knownEmail;
+      state.identified = true;
+    }
 
     log('Initialized with key:', state.key, 'api base:', state.apiBase);
     return true;
@@ -528,7 +539,8 @@
     const textarea = document.getElementById('sg-input');
     const text = textarea.value.trim();
 
-    if (!text || !state.token) return;
+    if (!text) return;
+    if (!state.token && !state.identified) return;
 
     textarea.value = '';
     textarea.style.height = 'auto';
@@ -542,6 +554,38 @@
     };
     state.messages.push(optimisticMsg);
     renderMessages();
+
+    // Identified visitor with no conversation yet: first send creates it.
+    if (!state.token) {
+      try {
+        const response = await fetch(`${state.apiBase}/api/conversations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            key: state.key,
+            name: state.name,
+            email: state.email,
+            pageUrl: location.href,
+            message: text,
+          }),
+        });
+        if (!response.ok) {
+          state.messages = state.messages.filter((m) => m.id !== optimisticMsg.id);
+          renderMessages();
+          return;
+        }
+        const data = await response.json();
+        state.token = data.token;
+        state.conversationStatus = data.status || 'open';
+        localStorage.setItem(`sg_token_${state.key}`, state.token);
+        startPolling();
+      } catch (err) {
+        warn('Error starting conversation:', err);
+        state.messages = state.messages.filter((m) => m.id !== optimisticMsg.id);
+        renderMessages();
+      }
+      return;
+    }
 
     try {
       const response = await fetch(`${state.apiBase}/api/c/${state.token}/messages`, {
@@ -602,6 +646,18 @@
       if (Array.isArray(data.messages)) {
         data.messages.forEach((msg) => {
           if (!state.messages.find((m) => m.id === msg.id)) {
+            // Reconcile optimistic sends: adopt the server id instead of duplicating the bubble.
+            const temp = msg.direction === 'in'
+              ? state.messages.find((m) => String(m.id).startsWith('temp-') && m.body === msg.body)
+              : null;
+            if (temp) {
+              temp.id = msg.id;
+              temp.at = msg.at;
+              if (!state.lastMessageId || msg.id > state.lastMessageId) {
+                state.lastMessageId = msg.id;
+              }
+              return;
+            }
             state.messages.push(msg);
             if (!state.lastMessageId || msg.id > state.lastMessageId) {
               state.lastMessageId = msg.id;
@@ -714,6 +770,9 @@
     if (state.token) {
       showChat();
       fetchMessages();
+    } else if (state.identified) {
+      // Known visitor: no pre-chat form; conversation starts on first message.
+      showChat();
     } else {
       showForm();
     }

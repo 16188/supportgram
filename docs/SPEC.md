@@ -77,7 +77,7 @@ Visitor's browser                   Vercel (serverless)               Telegram
 - **One bot per tenant**, created by the tenant via @BotFather and added as admin (with "Manage topics") to the tenant's supergroup. Bot token, supergroup ID, and a per-tenant webhook secret stored server-side.
 - **Webhooks** (`setWebhook` → `/api/tg/:publicKey`, verified via `x-telegram-bot-api-secret-token`) — required by the serverless deployment target; registered automatically by the seed script.
 - **Widget transport:** `POST` to send, short-polling (`GET ?after=<id>`, every 3s while open, paused when the tab is hidden) to receive. Serverless duration limits make SSE/WebSocket a poor fit; polling is fine at support-chat latency.
-- **Stack:** Vercel serverless functions (Node 20+, ESM), **Turso/libSQL** for the database (SQLite-compatible; local dev uses a `file:` URL, so no cloud dependency for development), raw HTTPS calls to the Bot API (no SDK), widget in plain JS bundled with esbuild (<15 KB gzipped), transactional email via Brevo, nightly purge via Vercel Cron.
+- **Stack:** Vercel serverless functions (Node 20+, ESM), **Turso/libSQL** for the database (SQLite-compatible; local dev uses a `file:` URL, so no cloud dependency for development), raw HTTPS calls to the Bot API (no SDK), widget in plain JS bundled with esbuild (<15 KB gzipped), transactional email via SendGrid, nightly purge via Vercel Cron.
 
 ## 6. Conversation lifecycle & routing
 
@@ -118,7 +118,7 @@ Non-negotiable for pilot launch:
 2. **Telegram side first** — per-tenant getUpdates poller; create topic, post info card, relay a hardcoded test message in/out. (Riskiest integration goes first.)
 3. **Widget MVP** — script-tag embed, pre-chat form, POST send, SSE receive, localStorage resume.
 4. **Agent verbs** — `/close`, `/note`, round-robin @mention, reopen-on-new-message.
-5. **Email resume** — offline detection, Brevo template, resume page.
+5. **Email resume** — offline detection, SendGrid template, resume page.
 6. **Hardening** — rate limits, origin allowlist, purge job. **Gate: no pilot traffic before this lands.**
 7. **Pilot** — embed on hotlinehq.online, run 2–4 weeks, log every moment an agent wished for a feature Telegram couldn't provide (that list is the v1 roadmap).
 
@@ -167,7 +167,7 @@ Non-negotiable for pilot launch:
   - [ ] `/note` internal messages (never relayed)
   - [ ] Round-robin @mention suggestion; first reply sets assignee
 - [ ] **Phase 5 — Email resume**
-  - [ ] Offline detection (no active SSE) + Brevo "you have a reply" template (1/conversation/hour)
+  - [ ] Offline detection (no active SSE) + SendGrid "you have a reply" template (1/conversation/hour)
   - [ ] Resume page at `/c/{token}` (token moved out of URL immediately)
 - [ ] **Phase 6 — Hardening (pilot gate)**
   - [ ] Rate limits: per-IP create/send, per-conversation throttle, body-size cap

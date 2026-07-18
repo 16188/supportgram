@@ -17,6 +17,7 @@
     name: '',
     email: '',
     identified: false,
+    accent: '#1E8FD5',
   };
 
   // Utility functions
@@ -83,6 +84,12 @@
       state.identified = true;
     }
 
+    // Brand accent color (hex only; anything else falls back to the default).
+    const rawColor = String(settings.color || script.getAttribute('data-color') || '').trim();
+    if (/^#[0-9a-fA-F]{3,8}$/.test(rawColor)) {
+      state.accent = rawColor;
+    }
+
     log('Initialized with key:', state.key, 'api base:', state.apiBase);
     return true;
   }
@@ -93,6 +100,9 @@
     const style = document.createElement('style');
     style.id = 'sg-styles';
     style.textContent = `
+      .sg-launcher, .sg-panel {
+        --sg-accent: ${state.accent};
+      }
       .sg-launcher {
         position: fixed;
         bottom: 20px;
@@ -100,10 +110,10 @@
         width: 56px;
         height: 56px;
         border-radius: 50%;
-        background-color: #1E8FD5;
+        background-color: var(--sg-accent);
         border: none;
         cursor: pointer;
-        box-shadow: 0 2px 12px rgba(30, 143, 213, 0.4);
+        box-shadow: 0 2px 12px color-mix(in srgb, var(--sg-accent) 40%, transparent);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -114,7 +124,7 @@
       }
       .sg-launcher:hover {
         transform: scale(1.05);
-        box-shadow: 0 4px 16px rgba(30, 143, 213, 0.6);
+        box-shadow: 0 4px 16px color-mix(in srgb, var(--sg-accent) 60%, transparent);
       }
       .sg-launcher-badge {
         position: absolute;
@@ -211,15 +221,15 @@
       }
       .sg-input:focus, .sg-textarea:focus {
         outline: none;
-        border-color: #1E8FD5;
-        box-shadow: 0 0 0 3px rgba(30, 143, 213, 0.1);
+        border-color: var(--sg-accent);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--sg-accent) 10%, transparent);
       }
       .sg-textarea {
         min-height: 60px;
       }
       .sg-submit-btn {
         padding: 8px 16px;
-        background-color: #1E8FD5;
+        background-color: var(--sg-accent);
         color: white;
         border: none;
         border-radius: 6px;
@@ -229,7 +239,7 @@
         transition: background-color 0.2s;
       }
       .sg-submit-btn:hover {
-        background-color: #1a74b1;
+        background-color: color-mix(in srgb, var(--sg-accent) 85%, black);
       }
       .sg-submit-btn:disabled {
         background-color: #ccc;
@@ -262,7 +272,7 @@
         line-height: 1.4;
       }
       .sg-message-in .sg-message-bubble {
-        background-color: #1E8FD5;
+        background-color: var(--sg-accent);
         color: white;
       }
       .sg-message-out .sg-message-bubble {
@@ -306,11 +316,11 @@
       }
       .sg-input-row-textarea:focus {
         outline: none;
-        border-color: #1E8FD5;
+        border-color: var(--sg-accent);
       }
       .sg-send-btn {
         padding: 6px 12px;
-        background-color: #1E8FD5;
+        background-color: var(--sg-accent);
         color: white;
         border: none;
         border-radius: 6px;
@@ -321,7 +331,7 @@
         transition: background-color 0.2s;
       }
       .sg-send-btn:hover {
-        background-color: #1a74b1;
+        background-color: color-mix(in srgb, var(--sg-accent) 85%, black);
       }
       .sg-send-btn:disabled {
         background-color: #ccc;

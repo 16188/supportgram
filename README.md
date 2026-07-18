@@ -33,6 +33,8 @@ Supportgram is a multi-tenant B2B SaaS: drop a script tag on your website, and v
 <script src="https://supportgram.vercel.app/widget.js" data-key="YOUR_PUBLIC_KEY"></script>
 ```
 
+Optional `data-color="#d92d20"` (or `SupportgramSettings.color`) sets the widget accent to your brand color; hex values only.
+
 For visitors you've already identified (logged-in users), pass their identity and the pre-chat form is skipped — the conversation starts on their first message:
 
 ```html

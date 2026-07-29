@@ -1374,6 +1374,7 @@
     window.Supportgram = {
       identify(identity) { applyIdentity(identity); },
       reset() { applyIdentity(null); },
+      open() { if (!state.isOpen) togglePanel(); },
     };
   }
 

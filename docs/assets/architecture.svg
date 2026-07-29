@@ -24,8 +24,15 @@
       <stop offset="0%" stop-color="#22c55e"/>
       <stop offset="100%" stop-color="#16a34a"/>
     </linearGradient>
-    <filter id="shadow">
-      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.3"/>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="120%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"/>
+      <feOffset in="blur" dx="0" dy="2" result="offset"/>
+      <feFlood flood-color="#000" flood-opacity="0.3" result="color"/>
+      <feComposite in="color" in2="offset" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
   </defs>
 
@@ -89,7 +96,7 @@
 
   <!-- Database -->
   <g transform="translate(375, 295)">
-    <ellipse cx="75" cy="10" rx="75" ry="12" fill="#4FF8D2" opacity="0.15" stroke="#4FF8D2" stroke-width="1" opacity="0.4"/>
+    <ellipse cx="75" cy="10" rx="75" ry="12" fill="#4FF8D2" opacity="0.15" stroke="#4FF8D2" stroke-width="1"/>
     <rect x="0" y="10" width="150" height="40" fill="#0f172a" stroke="#4FF8D2" stroke-width="1" opacity="0.4"/>
     <ellipse cx="75" cy="50" rx="75" ry="12" fill="#0f172a" stroke="#4FF8D2" stroke-width="1" opacity="0.4"/>
     <ellipse cx="75" cy="10" rx="75" ry="12" fill="none" stroke="#4FF8D2" stroke-width="1"/>

@@ -1,6 +1,7 @@
 node_modules/
 .env
+.env*
 data/
 public/widget.js
 .vercel
-.env*
+*.interview-state.json

@@ -2,7 +2,34 @@
   "name": "supportgram",
   "version": "0.1.0",
   "type": "module",
-  "description": "Telegram live chat for your website",
+  "description": "Open-source Telegram live chat widget for websites. Route visitor conversations into Telegram forum topics. Multi-tenant, < 15 KB, zero dependencies.",
+  "keywords": [
+    "telegram",
+    "live-chat",
+    "chat-widget",
+    "customer-support",
+    "telegram-bot",
+    "helpdesk",
+    "website-chat",
+    "telegram-live-chat",
+    "support-widget",
+    "multi-tenant",
+    "vercel",
+    "turso",
+    "libsql",
+    "embeddable-widget",
+    "open-source"
+  ],
+  "homepage": "https://github.com/Sorbh/supportgram#readme",
+  "bugs": {
+    "url": "https://github.com/Sorbh/supportgram/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sorbh/supportgram.git"
+  },
+  "license": "MIT",
+  "author": "Saurabh K. Sharma",
   "scripts": {
     "dev": "vercel dev",
     "build:widget": "node widget/build.mjs",

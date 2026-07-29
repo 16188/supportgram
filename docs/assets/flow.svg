@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 280" fill="none">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="280" rx="12" fill="url(#bg3)"/>
+
+  <!-- Title -->
+  <text x="450" y="35" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#e2e8f0">Conversation Lifecycle</text>
+
+  <!-- Step 1: Visitor opens widget -->
+  <g transform="translate(30, 60)">
+    <rect width="140" height="100" rx="10" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+    <circle cx="70" cy="30" r="18" fill="#3b82f6" opacity="0.15"/>
+    <text x="70" y="35" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#3b82f6">1</text>
+    <text x="70" y="62" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">Visitor opens</text>
+    <text x="70" y="78" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">chat widget</text>
+    <text x="70" y="92" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">name + email form</text>
+  </g>
+
+  <!-- Arrow 1->2 -->
+  <line x1="170" y1="110" x2="200" y2="110" stroke="#475569" stroke-width="2"/>
+  <polygon points="200,110 193,105 193,115" fill="#475569"/>
+
+  <!-- Step 2: Topic created -->
+  <g transform="translate(200, 60)">
+    <rect width="140" height="100" rx="10" fill="#1e293b" stroke="#2AABEE" stroke-width="1.5"/>
+    <circle cx="70" cy="30" r="18" fill="#2AABEE" opacity="0.15"/>
+    <text x="70" y="35" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#2AABEE">2</text>
+    <text x="70" y="62" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">Forum topic</text>
+    <text x="70" y="78" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">created in TG</text>
+    <text x="70" y="92" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">+ pinned info card</text>
+  </g>
+
+  <!-- Arrow 2->3 -->
+  <line x1="340" y1="110" x2="370" y2="110" stroke="#475569" stroke-width="2"/>
+  <polygon points="370,110 363,105 363,115" fill="#475569"/>
+
+  <!-- Step 3: Messages relay -->
+  <g transform="translate(370, 60)">
+    <rect width="140" height="100" rx="10" fill="#1e293b" stroke="#22c55e" stroke-width="1.5"/>
+    <circle cx="70" cy="30" r="18" fill="#22c55e" opacity="0.15"/>
+    <text x="70" y="35" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#22c55e">3</text>
+    <text x="70" y="62" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">Messages relay</text>
+    <text x="70" y="78" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">both directions</text>
+    <text x="70" y="92" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">widget &lt;-&gt; topic</text>
+  </g>
+
+  <!-- Arrow 3->4 -->
+  <line x1="510" y1="110" x2="540" y2="110" stroke="#475569" stroke-width="2"/>
+  <polygon points="540,110 533,105 533,115" fill="#475569"/>
+
+  <!-- Step 4: Agent replies -->
+  <g transform="translate(540, 60)">
+    <rect width="140" height="100" rx="10" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+    <circle cx="70" cy="30" r="18" fill="#f59e0b" opacity="0.15"/>
+    <text x="70" y="35" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#f59e0b">4</text>
+    <text x="70" y="62" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">Agent replies</text>
+    <text x="70" y="78" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">from Telegram</text>
+    <text x="70" y="92" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">/close  /note</text>
+  </g>
+
+  <!-- Arrow 4->5 -->
+  <line x1="680" y1="110" x2="710" y2="110" stroke="#475569" stroke-width="2"/>
+  <polygon points="710,110 703,105 703,115" fill="#475569"/>
+
+  <!-- Step 5: Offline resume -->
+  <g transform="translate(710, 60)">
+    <rect width="160" height="100" rx="10" fill="#1e293b" stroke="#8b5cf6" stroke-width="1.5"/>
+    <circle cx="80" cy="30" r="18" fill="#8b5cf6" opacity="0.15"/>
+    <text x="80" y="35" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#8b5cf6">5</text>
+    <text x="80" y="62" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">Offline? Email</text>
+    <text x="80" y="78" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">resume link sent</text>
+    <text x="80" y="92" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">1 email / convo / hr</text>
+  </g>
+
+  <!-- Bottom: key highlights -->
+  <g transform="translate(30, 200)">
+    <rect width="840" height="55" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+
+    <g transform="translate(30, 15)">
+      <circle cx="8" cy="12" r="5" fill="#22c55e" opacity="0.5"/>
+      <text x="20" y="17" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">Round-robin agent @mention</text>
+    </g>
+
+    <g transform="translate(230, 15)">
+      <circle cx="8" cy="12" r="5" fill="#f59e0b" opacity="0.5"/>
+      <text x="20" y="17" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">First reply claims ownership</text>
+    </g>
+
+    <g transform="translate(440, 15)">
+      <circle cx="8" cy="12" r="5" fill="#3b82f6" opacity="0.5"/>
+      <text x="20" y="17" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">Resume token in localStorage</text>
+    </g>
+
+    <g transform="translate(650, 15)">
+      <circle cx="8" cy="12" r="5" fill="#ef4444" opacity="0.5"/>
+      <text x="20" y="17" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">90-day auto-purge</text>
+    </g>
+  </g>
+</svg>

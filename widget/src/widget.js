@@ -660,8 +660,14 @@
       }
       .sg-error.hidden { display: none; }
       @media (max-width: 420px) {
-        .sg-panel { width: calc(100vw - 24px); right: 12px; }
         .sg-teaser { width: calc(100vw - 104px); }
+      }
+      @media (max-width: 768px) {
+        .sg-panel {
+          top: 0; left: 0; right: 0; bottom: 0;
+          width: 100%; max-height: none; height: 100%;
+          border-radius: 0;
+        }
       }
     `;
     document.head.appendChild(style);

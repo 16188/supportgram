@@ -8,7 +8,6 @@ export const config = {
   BASE_URL: process.env.BASE_URL || 'http://localhost:3000',
   SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || '',
   SENDGRID_FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL || '',
-  CRON_SECRET: process.env.CRON_SECRET || '',
 };
 
 export default config;

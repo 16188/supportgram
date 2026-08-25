@@ -1,5 +1,5 @@
 // GET /c/:token — Resume conversation page
-// Served via Vercel rewrite from /c/:token
+// Served at /c/:token by the self-hosted server (and by a Vercel rewrite for compatibility).
 
 import { getConversationByToken, getBusiness, getMessages } from '../db/index.js';
 import { config } from '../config.js';

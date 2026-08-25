@@ -99,7 +99,7 @@
 
     <g transform="translate(650, 15)">
       <circle cx="8" cy="12" r="5" fill="#ef4444" opacity="0.5"/>
-      <text x="20" y="17" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">90-day auto-purge</text>
+      <text x="20" y="17" font-family="system-ui, sans-serif" font-size="11" fill="#94a3b8">Persistent conversation history</text>
     </g>
   </g>
 </svg>

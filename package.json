@@ -14,24 +14,25 @@
     "telegram-live-chat",
     "support-widget",
     "multi-tenant",
-    "vercel",
     "turso",
     "libsql",
     "embeddable-widget",
     "open-source"
   ],
-  "homepage": "https://github.com/Sorbh/supportgram#readme",
+  "homepage": "https://github.com/16188/supportgram#readme",
   "bugs": {
-    "url": "https://github.com/Sorbh/supportgram/issues"
+    "url": "https://github.com/16188/supportgram/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Sorbh/supportgram.git"
+    "url": "git+https://github.com/16188/supportgram.git"
   },
   "license": "MIT",
   "author": "Saurabh K. Sharma",
   "scripts": {
-    "dev": "vercel dev",
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "test": "node --test",
     "build:widget": "node widget/build.mjs",
     "seed": "node scripts/seed.mjs"
   },

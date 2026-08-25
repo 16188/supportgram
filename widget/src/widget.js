@@ -1236,7 +1236,7 @@
       const response = await fetch(url.toString());
 
       if (response.status === 404) {
-        // Token invalid (purged or bad); drop it and go home.
+        // Token invalid or unknown; drop it and go home.
         state.tokens = state.tokens.filter((t) => t !== token);
         saveTokens();
         state.token = null;

@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/Telegram-Live%20Chat-2CA5E0?logo=telegram&logoColor=white" alt="Telegram Live Chat Widget" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" />
   <img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen?logo=node.js" alt="Node.js >= 20" />
-  <img src="https://img.shields.io/badge/deploy-Vercel-black?logo=vercel" alt="Deploy on Vercel" />
+  <img src="https://img.shields.io/badge/deploy-Docker-2496ED?logo=docker&logoColor=white" alt="Deploy with Docker" />
   <img src="https://img.shields.io/badge/database-Turso%20%2F%20libSQL-4FF8D2?logo=sqlite" alt="Turso / libSQL" />
   <img src="https://img.shields.io/badge/widget-%3C15%20KB%20gzipped-blue" alt="Widget < 15 KB gzipped" />
 </p>
@@ -34,14 +34,14 @@ Most live chat tools force agents into yet another web inbox. Supportgram takes 
 - **One script tag** — Drop a `<script>` tag on your website and you're live in minutes.
 - **Tiny footprint** — The embeddable widget is under 15 KB gzipped. Pure vanilla JS, zero dependencies.
 - **Offline email resume** — When visitors leave, they get an email with a link to pick up the conversation later.
-- **Privacy-first** — 90-day auto-purge of conversations and Telegram topics. Per-tenant origin allowlists. No third-party trackers.
+- **Self-hosted data** — Conversations remain in your database until you remove them. Per-tenant origin allowlists. No third-party trackers.
 
 ---
 
 ## How It Works
 
 <p align="center">
-  <img src="docs/assets/architecture.svg" alt="Supportgram architecture — widget, Vercel serverless, Telegram, SendGrid" width="100%" />
+  <img src="docs/assets/architecture.svg" alt="Supportgram architecture — widget, VPS container, Telegram, SendGrid" width="100%" />
 </p>
 
 <p align="center">
@@ -70,7 +70,7 @@ Most live chat tools force agents into yet another web inbox. Supportgram takes 
 | **Agent commands** | `/close` to resolve, `/note` for internal messages never shown to visitors |
 | **Customizable widget** | Accent color, title, greeting text — all configurable via attributes or JS |
 | **Origin allowlisting** | Widget requests are validated against registered domains (CORS + Origin check) |
-| **90-day auto-purge** | Conversations and Telegram topics are automatically cleaned up via cron |
+| **Persistent history** | Conversations and Telegram topics are not automatically deleted |
 | **Rate limiting** | Per-IP and per-conversation throttles protect against abuse |
 
 ---
@@ -79,16 +79,15 @@ Most live chat tools force agents into yet another web inbox. Supportgram takes 
 
 ### Prerequisites
 
-- **Node.js >= 20**
+- **Docker Engine with Docker Compose**
 - A **Telegram bot** (create one via [@BotFather](https://t.me/BotFather))
 - A **Telegram supergroup with Topics enabled** (the bot must be an admin with "Manage Topics" permission)
 
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/Sorbh/supportgram.git
+git clone https://github.com/16188/supportgram.git
 cd supportgram
-npm install
 ```
 
 ### 2. Configure environment
@@ -100,18 +99,18 @@ cp .env.example .env
 Edit `.env` with your settings:
 
 ```env
-TURSO_DATABASE_URL=file:data/local.db   # local SQLite for development
-TURSO_AUTH_TOKEN=                         # leave blank for local dev
+TURSO_DATABASE_URL=file:data/supportgram.db
+TURSO_AUTH_TOKEN=
 BASE_URL=https://your-domain.com
 SENDGRID_API_KEY=your_sendgrid_key
 SENDGRID_FROM_EMAIL=support@your-domain.com
-CRON_SECRET=a_random_secret
 ```
 
-### 3. Seed your first business
+### 3. Start and seed your first business
 
 ```bash
-npm run seed -- \
+docker compose up -d
+docker compose run --rm supportgram npm run seed -- \
   --name "My Business" \
   --bot-token "123456:ABC-DEF..." \
   --supergroup -100123456789 \
@@ -121,14 +120,14 @@ npm run seed -- \
 
 The `--agents` format is `tg_user_id:DisplayName:tg_username` (username is optional), comma-separated. The script prints a **Public Key** (`pk_...`) — you'll need it for the widget embed.
 
-### 4. Build and run locally
+### 4. Check the service
 
 ```bash
-npm run build:widget
-vercel dev
+docker compose ps
+curl http://127.0.0.1:3000/health
 ```
 
-Open `http://localhost:3000/test.html` and set your public key in `data-key`.
+Put port 3000 behind your HTTPS reverse proxy, then open `/test.html` and set your public key in `data-key`. Telegram webhooks require a public HTTPS `BASE_URL`.
 
 ---
 
@@ -215,27 +214,25 @@ npm run seed -- \
 
 ## Deployment
 
-Supportgram runs on **Vercel** (serverless functions + cron) with a **Turso** (libSQL) database.
+Supportgram runs as a single **Docker** service. By default it stores libSQL data in a persistent Docker volume; a remote Turso database remains optional.
 
 ### Environment variables
 
 | Variable | Description |
 |---|---|
-| `TURSO_DATABASE_URL` | Turso database URL (or `file:data/local.db` for local dev) |
+| `TURSO_DATABASE_URL` | Turso database URL, or `file:data/supportgram.db` for persistent local storage |
 | `TURSO_AUTH_TOKEN` | Turso auth token (blank for local dev) |
 | `BASE_URL` | Your public URL (e.g., `https://supportgram.io`) |
 | `SENDGRID_API_KEY` | SendGrid API key for email notifications |
 | `SENDGRID_FROM_EMAIL` | Sender email address for notifications |
-| `CRON_SECRET` | Secret to protect the cron purge endpoint |
-
-### Deploy to Vercel
+### Upgrade
 
 ```bash
-npm i -g vercel
-vercel
+docker compose pull
+docker compose up -d
 ```
 
-The `vercel.json` includes a daily cron job for the 90-day purge and URL rewrites for resume links.
+Every push to `main` builds `ghcr.io/16188/supportgram:latest`; commit-SHA tags are also published. Automatic data deletion is disabled.
 
 ---
 
@@ -243,12 +240,12 @@ The `vercel.json` includes a daily cron job for the 90-day purge and URL rewrite
 
 | Component | Technology |
 |---|---|
-| **Backend** | Vercel Serverless Functions (Node.js 20+, ESM) |
-| **Database** | Turso / libSQL (SQLite-compatible, local file for dev) |
+| **Backend** | Node.js 20+, ESM, Docker |
+| **Database** | Turso / libSQL (SQLite-compatible, persistent local file by default) |
 | **Widget** | Vanilla JavaScript, bundled with esbuild (< 15 KB gzipped) |
 | **Telegram** | Raw Bot API calls (no SDK) via webhooks |
 | **Email** | SendGrid transactional emails |
-| **Scheduling** | Vercel Cron (nightly purge) |
+| **Retention** | Indefinite; no automatic purge |
 
 ---
 
@@ -260,7 +257,7 @@ supportgram/
 |   +-- conversations.js    # Create/list conversations, send/poll messages
 |   +-- resume.js           # Email resume link handler
 |   +-- tg/[key].js         # Telegram webhook receiver (per-tenant)
-|   +-- cron/purge.js       # Nightly 90-day data purge
+|   +-- cron/purge.js       # Disabled compatibility endpoint
 +-- db/
 |   +-- schema.js           # SQLite schema (businesses, agents, conversations, messages)
 |   +-- index.js            # Database connection + helpers
@@ -276,7 +273,9 @@ supportgram/
 +-- public/
 |   +-- test.html           # Local testing page
 +-- config.js               # Environment configuration
-+-- vercel.json             # Vercel deployment config
++-- server.js               # Self-hosted Node.js HTTP server
++-- Dockerfile
++-- docker-compose.yml
 +-- package.json
 ```
 
@@ -314,13 +313,13 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Acknowledgments
 
-Built with [Vercel](https://vercel.com), [Turso](https://turso.tech), and the [Telegram Bot API](https://core.telegram.org/bots/api).
+Built with Node.js, [Turso/libSQL](https://turso.tech), and the [Telegram Bot API](https://core.telegram.org/bots/api).
 
 ---
 
 <p align="center">
   <b>Supportgram</b> &mdash; Telegram live chat widget for your website<br/>
-  <a href="https://github.com/Sorbh/supportgram">GitHub</a> &middot;
-  <a href="https://github.com/Sorbh/supportgram/issues">Issues</a> &middot;
+  <a href="https://github.com/16188/supportgram">GitHub</a> &middot;
+  <a href="https://github.com/16188/supportgram/issues">Issues</a> &middot;
   <a href="LICENSE">MIT License</a>
 </p>

@@ -1,9 +1,6 @@
 {
   "buildCommand": "node widget/build.mjs",
   "outputDirectory": "public",
-  "crons": [
-    { "path": "/api/cron/purge", "schedule": "0 8 * * *" }
-  ],
   "rewrites": [
     { "source": "/c/:token", "destination": "/api/resume?token=:token" }
   ]

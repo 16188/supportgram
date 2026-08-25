@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | Status | Approved (interactive preview signed off 2026-07-18) |
-| Repo | https://github.com/Sorbh/supportgram |
+| Repo | https://github.com/16188/supportgram |
 | Domain | supportgram.io (register immediately; inquire on supportgram.com) |
 | First tenant | Hotline HQ (hotlinehq.online) — live pilot with real US auto-dealer traffic |
 
@@ -49,12 +49,12 @@ The widget runs live on hotlinehq.online for 2–4 weeks; real dealer questions 
 ### In scope
 
 - Embeddable JS widget: pre-chat form, live chat pane, resume via email link
-- Relay backend: widget ⇄ Telegram forum topics, one bot per tenant, webhooks (Vercel serverless)
+- Relay backend: widget ⇄ Telegram forum topics, one bot per tenant, webhooks (self-hosted Node.js)
 - Hybrid assignment: round-robin @mention suggestion; any agent may answer
 - Agent verbs in Telegram: reply, `/close`, `/note`, auto-posted customer info card
 - Email notification with resume link when the customer is offline
 - Multi-tenant schema with manual (SQL) tenant onboarding
-- Security baseline: rate limiting, random resume tokens, per-tenant origin allowlist, 90-day auto-purge
+- Security baseline: rate limiting, random resume tokens, per-tenant origin allowlist
 
 ### Out of scope (POC)
 
@@ -65,7 +65,7 @@ The widget runs live on hotlinehq.online for 2–4 weeks; real dealer questions 
 ## 5. Architecture
 
 ```
-Visitor's browser                   Vercel (serverless)               Telegram
+Visitor's browser                   VPS (Docker)                      Telegram
 ┌─────────────────┐   POST /msg    ┌──────────────────────┐  Bot API  ┌─────────────────────┐
 │  widget.js       │ ─────────────▶ │  api/* functions     │ ────────▶ │ Tenant supergroup    │
 │  (script tag)    │ ◀───────────── │  + Turso (libSQL DB) │ ◀──────── │ (Topics ON)          │
@@ -75,9 +75,9 @@ Visitor's browser                   Vercel (serverless)               Telegram
 ```
 
 - **One bot per tenant**, created by the tenant via @BotFather and added as admin (with "Manage topics") to the tenant's supergroup. Bot token, supergroup ID, and a per-tenant webhook secret stored server-side.
-- **Webhooks** (`setWebhook` → `/api/tg/:publicKey`, verified via `x-telegram-bot-api-secret-token`) — required by the serverless deployment target; registered automatically by the seed script.
-- **Widget transport:** `POST` to send, short-polling (`GET ?after=<id>`, every 3s while open, paused when the tab is hidden) to receive. Serverless duration limits make SSE/WebSocket a poor fit; polling is fine at support-chat latency.
-- **Stack:** Vercel serverless functions (Node 20+, ESM), **Turso/libSQL** for the database (SQLite-compatible; local dev uses a `file:` URL, so no cloud dependency for development), raw HTTPS calls to the Bot API (no SDK), widget in plain JS bundled with esbuild (<15 KB gzipped), transactional email via SendGrid, nightly purge via Vercel Cron.
+- **Webhooks** (`setWebhook` → `/api/tg/:publicKey`, verified via `x-telegram-bot-api-secret-token`) are registered automatically by the seed script.
+- **Widget transport:** `POST` to send, short-polling (`GET ?after=<id>`, every 3s while open, paused when the tab is hidden) to receive.
+- **Stack:** self-hosted Node.js 20 in Docker, **Turso/libSQL** for the database (persistent local file by default), raw HTTPS calls to the Bot API (no SDK), widget in plain JS bundled with esbuild (<15 KB gzipped), and transactional email via SendGrid.
 
 ## 6. Conversation lifecycle & routing
 
@@ -97,7 +97,7 @@ Visitor's browser                   Vercel (serverless)               Telegram
 | `messages` | `id`, `conversation_id`, `direction` (in/out/note), `sender_label`, `body`, `tg_message_id`, `created_at` |
 
 - Every row carries `business_id` from day one; adding a tenant is a manual INSERT plus BotFather setup. No signup UI, no billing tables.
-- A nightly job purges conversations (and messages) with `last_activity_at` older than 90 days, and deletes the matching Telegram forum topics so history doesn't outlive the database.
+- Conversations and messages remain in the database indefinitely; Telegram forum topics are not automatically deleted.
 
 ## 8. Security & privacy
 
@@ -108,9 +108,9 @@ Non-negotiable for pilot launch:
 - **Per-tenant origin allowlist:** widget requests validated against the tenant's registered domains (Origin/Referer check + CORS); embedding on an unlisted domain is rejected.
 - **Secrets:** bot tokens live only in the server database; nothing secret ships in the widget bundle.
 
-> **Accepted risk (by design):** every customer message, name, and email flows into Telegram's cloud — Telegram is a data processor for all tenants. Inherent to the product concept, acceptable for the POC, and must be disclosed to future tenants. Deleting from our DB does not delete Telegram-side history except via the topic-deletion purge.
+> **Accepted risk (by design):** every customer message, name, and email flows into Telegram's cloud — Telegram is a data processor for all tenants. Inherent to the product concept and must be disclosed to tenants.
 
-**Retention:** 90-day auto-purge (DB + Telegram topics). Per-tenant retention settings and a deletion API are v1 requirements before selling to compliance-sensitive tenants.
+**Retention:** indefinite. Operators are responsible for backups and any manual deletion required by their privacy policy.
 
 ## 9. Implementation order
 
@@ -119,7 +119,7 @@ Non-negotiable for pilot launch:
 3. **Widget MVP** — script-tag embed, pre-chat form, POST send, SSE receive, localStorage resume.
 4. **Agent verbs** — `/close`, `/note`, round-robin @mention, reopen-on-new-message.
 5. **Email resume** — offline detection, SendGrid template, resume page.
-6. **Hardening** — rate limits, origin allowlist, purge job. **Gate: no pilot traffic before this lands.**
+6. **Hardening** — rate limits and origin allowlist. **Gate: no pilot traffic before this lands.**
 7. **Pilot** — embed on hotlinehq.online, run 2–4 weeks, log every moment an agent wished for a feature Telegram couldn't provide (that list is the v1 roadmap).
 
 **Dependencies:** 3 needs 2's relay API; 4–5 need 3; 6 blocks 7. Steps 2 and 3 parallelize once the schema (1) exists.
@@ -143,9 +143,9 @@ Non-negotiable for pilot launch:
 | 8 | Agent verbs: /close, /note, info card; canned replies skipped | Keep "Telegram is the whole tool" honest with minimal command surface. |
 | 9 | POC bar = live pilot on hotlinehq.online | Real traffic over demo; forces email + hardening into scope. |
 | 10 | Security baseline non-negotiable | Rate limits, 128-bit resume tokens, origin allowlist — public endpoint on a production domain. |
-| 11 | 90-day auto-purge incl. Telegram topics; Telegram-as-processor accepted risk | Owner chose purge over keep-forever; processor risk recorded, to be disclosed to tenants. |
+| 11 | Indefinite retention in this fork | Automatic database and Telegram-topic deletion is disabled; operators own backup and privacy-policy compliance. |
 | 12 | **Name: Supportgram** (supportgram.io) | Owner preference over Claude's rec (GramSupport, whose .com was free). Cost = living on .io; mitigation = inquiry on supportgram.com. |
-| 13 | **Deploy on Vercel** (post-approval change, 2026-07-18) | Owner call. Consequences: long-polling → Telegram webhooks; SQLite file → Turso/libSQL; SSE → widget short-polling; pm2 → Vercel Cron for purge. Claude noted the existing VPS was zero-rework; owner chose Vercel. Local dev keeps SQLite semantics via libSQL `file:` URLs. |
+| 13 | **Deploy on a VPS with Docker** | The native Node.js server keeps the existing API handlers and stores libSQL data in a persistent volume. |
 
 ## 11. Task checklist
 
@@ -172,7 +172,7 @@ Non-negotiable for pilot launch:
 - [ ] **Phase 6 — Hardening (pilot gate)**
   - [ ] Rate limits: per-IP create/send, per-conversation throttle, body-size cap
   - [ ] Per-tenant origin allowlist enforcement (Origin/Referer + CORS)
-  - [ ] Nightly 90-day purge job (DB rows + Telegram topic deletion)
+  - [ ] Back up the persistent database volume
 - [ ] **Phase 7 — Pilot**
   - [ ] Embed on hotlinehq.online; announce to dealers
   - [ ] Run 2–4 weeks; keep a "wished Telegram could…" log → v1 roadmap

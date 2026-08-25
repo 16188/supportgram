@@ -71,15 +71,15 @@
 
   <text x="130" y="280" text-anchor="middle" font-family="monospace" font-size="10" fill="#64748b">widget.js &lt; 15KB</text>
 
-  <!-- ========== VERCEL BACKEND ========== -->
+  <!-- ========== VPS BACKEND ========== -->
   <g filter="url(#shadow)">
     <rect x="330" y="70" width="240" height="340" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
   </g>
   <rect x="330" y="70" width="240" height="36" rx="12" fill="url(#teal)"/>
   <rect x="330" y="94" width="240" height="12" fill="url(#teal)"/>
-  <!-- Vercel triangle icon -->
+  <!-- Container icon -->
   <polygon points="350,92 358,80 366,92" fill="#fff" opacity="0.4"/>
-  <text x="450" y="93" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#fff">Vercel Serverless</text>
+  <text x="450" y="93" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#fff">VPS Docker Service</text>
 
   <!-- API routes -->
   <rect x="350" y="122" width="200" height="32" rx="6" fill="#0f172a" stroke="#475569" stroke-width="1"/>
@@ -103,9 +103,9 @@
     <text x="75" y="36" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#4FF8D2">Turso / libSQL</text>
   </g>
 
-  <!-- Cron -->
+  <!-- Retention -->
   <rect x="350" y="375" width="200" height="24" rx="4" fill="#0f172a" stroke="#475569" stroke-width="1"/>
-  <text x="450" y="391" text-anchor="middle" font-family="monospace" font-size="10" fill="#64748b">cron: 90-day purge @ 8am</text>
+  <text x="450" y="391" text-anchor="middle" font-family="monospace" font-size="10" fill="#64748b">persistent conversation history</text>
 
   <!-- ========== TELEGRAM ========== -->
   <g filter="url(#shadow)">
@@ -150,27 +150,27 @@
 
   <!-- ========== ARROWS ========== -->
 
-  <!-- Visitor -> Vercel: POST messages -->
+  <!-- Visitor -> VPS: POST messages -->
   <line x1="230" y1="145" x2="330" y2="138" stroke="#3b82f6" stroke-width="2" stroke-dasharray="6,3"/>
   <polygon points="330,138 320,132 320,144" fill="#3b82f6"/>
   <text x="280" y="128" text-anchor="middle" font-family="monospace" font-size="9" fill="#64748b">POST</text>
 
-  <!-- Vercel -> Visitor: poll response -->
+  <!-- VPS -> Visitor: poll response -->
   <line x1="330" y1="178" x2="230" y2="185" stroke="#3b82f6" stroke-width="2" stroke-dasharray="6,3"/>
   <polygon points="230,185 240,179 240,191" fill="#3b82f6"/>
   <text x="280" y="198" text-anchor="middle" font-family="monospace" font-size="9" fill="#64748b">poll</text>
 
-  <!-- Vercel -> Telegram: Bot API -->
+  <!-- VPS -> Telegram: Bot API -->
   <line x1="570" y1="138" x2="670" y2="138" stroke="#2AABEE" stroke-width="2"/>
   <polygon points="670,138 660,132 660,144" fill="#2AABEE"/>
   <text x="620" y="128" text-anchor="middle" font-family="monospace" font-size="9" fill="#64748b">Bot API</text>
 
-  <!-- Telegram -> Vercel: webhook -->
+  <!-- Telegram -> VPS: webhook -->
   <line x1="670" y1="218" x2="570" y2="218" stroke="#2AABEE" stroke-width="2"/>
   <polygon points="570,218 580,212 580,224" fill="#2AABEE"/>
   <text x="620" y="242" text-anchor="middle" font-family="monospace" font-size="9" fill="#64748b">webhook</text>
 
-  <!-- Vercel -> Email -->
+  <!-- VPS -> Email -->
   <line x1="550" y1="380" x2="670" y2="395" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,3"/>
   <polygon points="670,395 660,389 660,401" fill="#8b5cf6"/>
   <text x="610" y="378" text-anchor="middle" font-family="monospace" font-size="9" fill="#64748b">offline reply</text>

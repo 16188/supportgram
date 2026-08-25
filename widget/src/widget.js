@@ -30,6 +30,15 @@
     teaserEl: null,
   };
 
+  const MEDIA_LIMITS = {
+    'image/jpeg': 10 * 1024 * 1024,
+    'image/png': 10 * 1024 * 1024,
+    'image/webp': 10 * 1024 * 1024,
+    'video/mp4': 20 * 1024 * 1024,
+    'video/webm': 20 * 1024 * 1024,
+    'video/quicktime': 20 * 1024 * 1024,
+  };
+
   function log(...args) {
     if (typeof window !== 'undefined' && window.console) {
       console.log('[supportgram]', ...args);
@@ -577,6 +586,18 @@
         border: 1px solid #e8eaee;
       }
       .sg-message-out.sg-group-end .sg-message-bubble { border-bottom-left-radius: 5px; }
+      .sg-message-bubble.sg-media-bubble { padding: 4px; overflow: hidden; }
+      .sg-message-media {
+        display: block;
+        width: 100%;
+        max-width: 240px;
+        max-height: 280px;
+        border-radius: 12px;
+        object-fit: contain;
+        background: #111;
+      }
+      .sg-media-link { display: block; }
+      .sg-media-caption { padding: 5px 8px 4px; }
       .sg-message-sender {
         font-size: 11.5px;
         font-weight: 600;
@@ -613,6 +634,22 @@
         flex: 0 0 auto;
         background: white;
       }
+      .sg-attach-btn {
+        width: 36px;
+        height: 36px;
+        flex: 0 0 36px;
+        border: none;
+        border-radius: 50%;
+        background: #eef0f3;
+        color: #606875;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+      }
+      .sg-attach-btn:hover { background: #e2e5e9; }
+      .sg-attach-btn:disabled { opacity: 0.45; cursor: not-allowed; }
       .sg-input-shell {
         flex: 1;
         display: flex;
@@ -785,7 +822,7 @@
     teaser.innerHTML = `
       <div class="sg-teaser-title"></div>
       <div class="sg-teaser-text"></div>
-      <button class="sg-teaser-btn primary" id="sg-teaser-yes">我有问题</button>
+      <button class="sg-teaser-btn primary" id="sg-teaser-yes">我要咨询</button>
       <button class="sg-teaser-btn secondary" id="sg-teaser-no">暂时不用</button>
     `;
     teaser.querySelector('.sg-teaser-title').textContent = state.title;
@@ -963,6 +1000,11 @@
     state.token = token;
     state.tokens.push(token);
     saveTokens();
+    const attachBtn = document.getElementById('sg-attach');
+    if (attachBtn) {
+      attachBtn.disabled = false;
+      attachBtn.title = '发送图片或视频';
+    }
   }
 
   /* ---------------- pre-chat form ---------------- */
@@ -1054,6 +1096,10 @@
     content.innerHTML = `
       <div class="sg-messages" id="sg-messages"></div>
       <div class="sg-input-row">
+        <button class="sg-attach-btn" id="sg-attach" aria-label="发送图片或视频" title="${state.token ? '发送图片或视频' : '请先发送一条文字消息'}" ${state.token ? '' : 'disabled'}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.6l-8.9 8.9a6 6 0 01-8.5-8.5l9.6-9.6a4 4 0 015.7 5.7l-9.6 9.6a2 2 0 01-2.8-2.8l8.9-8.9"/></svg>
+        </button>
+        <input type="file" id="sg-media-input" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" hidden>
         <div class="sg-input-shell">
           <textarea class="sg-input-row-textarea" id="sg-input" rows="1" placeholder="请输入消息..."></textarea>
         </div>
@@ -1066,6 +1112,8 @@
 
     const textarea = document.getElementById('sg-input');
     const sendBtn = document.getElementById('sg-send');
+    const attachBtn = document.getElementById('sg-attach');
+    const mediaInput = document.getElementById('sg-media-input');
 
     textarea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -1074,6 +1122,11 @@
       }
     });
     sendBtn.addEventListener('click', sendMessage);
+    attachBtn.addEventListener('click', () => mediaInput.click());
+    mediaInput.addEventListener('change', () => {
+      const file = mediaInput.files[0];
+      if (file) uploadMedia(file);
+    });
     textarea.addEventListener('input', () => {
       textarea.style.height = 'auto';
       textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
@@ -1131,7 +1184,36 @@
 
       const bubble = document.createElement('div');
       bubble.className = 'sg-message-bubble';
-      bubble.textContent = msg.body;
+
+      if (msg.media) {
+        bubble.classList.add('sg-media-bubble');
+        const mediaUrl = new URL(msg.media.url, state.apiBase).toString();
+        const media = document.createElement(msg.media.type === 'image' ? 'img' : 'video');
+        media.className = 'sg-message-media';
+        media.src = mediaUrl;
+        media.title = msg.media.name || '';
+        if (msg.media.type === 'image') {
+          media.loading = 'lazy';
+          const link = document.createElement('a');
+          link.className = 'sg-media-link';
+          link.href = mediaUrl;
+          link.target = '_blank';
+          link.rel = 'noopener';
+          link.appendChild(media);
+          bubble.appendChild(link);
+        } else {
+          media.controls = true;
+          media.preload = 'metadata';
+          bubble.appendChild(media);
+        }
+      }
+
+      if (msg.body && (!msg.media || !['[图片]', '[视频]'].includes(msg.body))) {
+        const caption = document.createElement('div');
+        caption.className = msg.media ? 'sg-media-caption' : '';
+        caption.textContent = msg.body;
+        bubble.appendChild(caption);
+      }
       col.appendChild(bubble);
 
       if (groupEnd && msg.at) {
@@ -1227,6 +1309,48 @@
       warn('Error sending message:', err);
       state.messages = state.messages.filter((m) => m.id !== optimisticMsg.id);
       renderMessages();
+    }
+  }
+
+  async function uploadMedia(file) {
+    if (!state.token) return;
+
+    const limit = MEDIA_LIMITS[file.type];
+    if (!limit) {
+      window.alert('只支持 JPG、PNG、WebP 图片和 MP4、WebM、MOV 视频');
+      return;
+    }
+    if (file.size > limit) {
+      window.alert(file.type.startsWith('image/') ? '图片不能超过 10 MB' : '视频不能超过 20 MB');
+      return;
+    }
+
+    const attachBtn = document.getElementById('sg-attach');
+    const mediaInput = document.getElementById('sg-media-input');
+    attachBtn.disabled = true;
+    attachBtn.title = '上传中...';
+
+    try {
+      const response = await fetch(
+        `${state.apiBase}/api/c/${state.token}/upload?name=${encodeURIComponent(file.name)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': file.type },
+          body: file,
+        }
+      );
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        window.alert(data.error || '文件上传失败');
+        return;
+      }
+      await fetchMessages();
+    } catch {
+      window.alert('网络错误，请稍后重试');
+    } finally {
+      attachBtn.disabled = false;
+      attachBtn.title = '发送图片或视频';
+      mediaInput.value = '';
     }
   }
 

@@ -15,6 +15,10 @@ function escapeHtml(text) {
   return String(text ?? '').replace(/[&<>"']/g, (char) => map[char]);
 }
 
+function jsonForScript(value) {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'method not allowed' });
@@ -47,7 +51,7 @@ export default async function handler(req, res) {
   }
 
   const businessNameEsc = escapeHtml(business.name);
-  const messagesJson = JSON.stringify(
+  const messagesJson = jsonForScript(
     messages
       .filter((m) => m.direction !== 'note')
       .map((m) => ({
@@ -55,6 +59,13 @@ export default async function handler(req, res) {
         direction: m.direction,
         sender: m.sender_label || (m.direction === 'in' ? conversation.customer_name : '客服'),
         body: m.body,
+        media: m.media_path ? {
+          type: m.media_type,
+          name: m.media_name,
+          mime: m.media_mime,
+          size: Number(m.media_size) || 0,
+          url: `/api/c/${encodeURIComponent(token)}/media/${encodeURIComponent(String(m.media_path).split('/').pop())}`,
+        } : null,
         at: m.created_at,
       }))
   );
@@ -137,6 +148,17 @@ export default async function handler(req, res) {
       opacity: 0.7;
       margin-bottom: 4px;
     }
+    .message-media {
+      display: block;
+      width: 100%;
+      max-width: 320px;
+      max-height: 360px;
+      border-radius: 6px;
+      object-fit: contain;
+      background: #111;
+    }
+    .media-link { display: block; }
+    .media-caption { margin-top: 6px; }
     @media (prefers-color-scheme: dark) {
       .message.out { background: #424242; color: #e0e0e0; }
     }
@@ -207,7 +229,9 @@ export default async function handler(req, res) {
     <div class="messages" id="messages"></div>
     <div class="input-area" id="inputArea">
       <textarea id="messageInput" placeholder="请输入消息..." maxlength="4000"></textarea>
+      <input id="mediaInput" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" hidden>
       <div class="button-row">
+        <button id="mediaBtn" type="button">发送图片或视频</button>
         <button id="sendBtn">发送</button>
       </div>
       <div id="error"></div>
@@ -215,9 +239,9 @@ export default async function handler(req, res) {
   </div>
 
   <script>
-    const tokenData = ${JSON.stringify({ token })};
+    const tokenData = ${jsonForScript({ token })};
     const messagesData = ${messagesJson};
-    const conversationStatus = ${JSON.stringify(conversation.status)};
+    let conversationStatus = ${jsonForScript(conversation.status)};
 
     let lastMessageId = 0;
 
@@ -243,9 +267,33 @@ export default async function handler(req, res) {
           div.appendChild(sender);
         }
 
-        const text = document.createElement('div');
-        text.textContent = msg.body;
-        div.appendChild(text);
+        if (msg.media) {
+          const media = document.createElement(msg.media.type === 'image' ? 'img' : 'video');
+          media.className = 'message-media';
+          media.src = msg.media.url;
+          media.title = msg.media.name || '';
+          if (msg.media.type === 'image') {
+            media.loading = 'lazy';
+            const link = document.createElement('a');
+            link.className = 'media-link';
+            link.href = msg.media.url;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.appendChild(media);
+            div.appendChild(link);
+          } else {
+            media.controls = true;
+            media.preload = 'metadata';
+            div.appendChild(media);
+          }
+        }
+
+        if (msg.body && (!msg.media || !['[图片]', '[视频]'].includes(msg.body))) {
+          const text = document.createElement('div');
+          text.className = msg.media ? 'media-caption' : '';
+          text.textContent = msg.body;
+          div.appendChild(text);
+        }
         container.appendChild(div);
 
         lastMessageId = Math.max(lastMessageId, msg.id);
@@ -292,6 +340,43 @@ export default async function handler(req, res) {
       }
     }
 
+    async function uploadMedia(file) {
+      const limits = {
+        'image/jpeg': 10 * 1024 * 1024,
+        'image/png': 10 * 1024 * 1024,
+        'image/webp': 10 * 1024 * 1024,
+        'video/mp4': 20 * 1024 * 1024,
+        'video/webm': 20 * 1024 * 1024,
+        'video/quicktime': 20 * 1024 * 1024,
+      };
+      const limit = limits[file.type];
+      if (!limit) return showError('只支持 JPG、PNG、WebP 图片和 MP4、WebM、MOV 视频');
+      if (file.size > limit) return showError(file.type.startsWith('image/') ? '图片不能超过 10 MB' : '视频不能超过 20 MB');
+
+      const btn = document.getElementById('mediaBtn');
+      btn.disabled = true;
+      btn.textContent = '上传中...';
+      try {
+        const response = await fetch('/api/c/' + tokenData.token + '/upload?name=' + encodeURIComponent(file.name), {
+          method: 'POST',
+          headers: { 'Content-Type': file.type },
+          body: file,
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          showError(data.error || '文件上传失败');
+          return;
+        }
+        pollMessages();
+      } catch {
+        showError('网络错误，请稍后重试');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '发送图片或视频';
+        document.getElementById('mediaInput').value = '';
+      }
+    }
+
     async function pollMessages() {
       try {
         const response = await fetch('/api/c/' + tokenData.token + '/messages?after=' + lastMessageId);
@@ -302,6 +387,7 @@ export default async function handler(req, res) {
         if (!response.ok) return;
 
         const data = await response.json();
+        conversationStatus = data.status || conversationStatus;
         if (data.messages && data.messages.length > 0) {
           data.messages.forEach((msg) => {
             messagesData.push(msg);
@@ -315,6 +401,13 @@ export default async function handler(req, res) {
     }
 
     document.getElementById('sendBtn').addEventListener('click', sendMessage);
+    document.getElementById('mediaBtn').addEventListener('click', () => {
+      document.getElementById('mediaInput').click();
+    });
+    document.getElementById('mediaInput').addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file) uploadMedia(file);
+    });
     document.getElementById('messageInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();

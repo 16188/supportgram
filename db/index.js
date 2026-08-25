@@ -191,14 +191,21 @@ export async function countRecentMessages(conversationId, seconds) {
 
 export async function addMessage(fields) {
   const result = await q(
-    `INSERT INTO messages (conversation_id, direction, sender_label, body, tg_message_id)
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO messages
+       (conversation_id, direction, sender_label, body, tg_message_id,
+        media_type, media_path, media_name, media_mime, media_size)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       fields.conversation_id,
       fields.direction,
       fields.sender_label || null,
       fields.body,
       fields.tg_message_id || null,
+      fields.media_type || null,
+      fields.media_path || null,
+      fields.media_name || null,
+      fields.media_mime || null,
+      fields.media_size || null,
     ]
   );
   await touchConversation(fields.conversation_id);
@@ -209,12 +216,35 @@ export async function addMessage(fields) {
     sender_label: fields.sender_label || null,
     body: fields.body,
     tg_message_id: fields.tg_message_id || null,
+    media_type: fields.media_type || null,
+    media_path: fields.media_path || null,
+    media_name: fields.media_name || null,
+    media_mime: fields.media_mime || null,
+    media_size: fields.media_size || null,
     created_at: new Date().toISOString(),
   };
 }
 
+export async function getConversationMediaBytes(conversationId) {
+  const row = firstRow(await q(
+    'SELECT COALESCE(SUM(media_size), 0) AS total FROM messages WHERE conversation_id = ?',
+    [conversationId]
+  ));
+  return Number(row.total) || 0;
+}
+
 export async function getMessages(conversationId) {
   return toObjects(await q('SELECT * FROM messages WHERE conversation_id = ? ORDER BY id', [conversationId]));
+}
+
+export async function getMessageMedia(conversationId, storageName) {
+  return firstRow(await q(
+    `SELECT media_type, media_path, media_name, media_mime, media_size
+     FROM messages
+     WHERE conversation_id = ? AND media_path = ?
+     LIMIT 1`,
+    [conversationId, `uploads/${storageName}`]
+  ));
 }
 
 export async function getExpiredConversations(days) {

@@ -4,7 +4,9 @@ import { createServer } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import conversations from './api/conversations.js';
+import media from './api/c/[token]/media.js';
 import messages from './api/c/[token]/messages.js';
+import upload from './api/c/[token]/upload.js';
 import resume from './api/resume.js';
 import telegram from './api/tg/[key].js';
 
@@ -61,6 +63,19 @@ function findHandler(pathname, query) {
     return messages;
   }
 
+  match = pathname.match(/^\/api\/c\/([^/]+)\/upload$/);
+  if (match) {
+    query.token = decodeURIComponent(match[1]);
+    return upload;
+  }
+
+  match = pathname.match(/^\/api\/c\/([^/]+)\/media\/([^/]+)$/);
+  if (match) {
+    query.token = decodeURIComponent(match[1]);
+    query.file = decodeURIComponent(match[2]);
+    return media;
+  }
+
   match = pathname.match(/^\/api\/tg\/([^/]+)$/);
   if (match) {
     query.key = decodeURIComponent(match[1]);
@@ -103,7 +118,7 @@ async function handle(req, res) {
   const handler = findHandler(url.pathname, req.query);
   if (handler) {
     try {
-      req.body = await readBody(req);
+      if (!handler.rawBody) req.body = await readBody(req);
       return await handler(req, res);
     } catch (error) {
       const badRequest = error instanceof SyntaxError || error.message === 'request body too large';

@@ -2,6 +2,9 @@
 
 ## 2026-08-25
 
+- Added bidirectional image and video messaging between the website widget and Telegram, with media stored in `data/uploads`.
+- Changed the proactive chat action label to `我要咨询`.
+- Removed technical installation details from the public landing page.
 - Translated all visitor- and agent-facing interface text into Chinese.
 - Replaced the widget's interior avatars with the MAITG website logo while retaining the original chat launcher icon.
 - Stored the local database in the deployment directory at `./data/supportgram.db`.

@@ -216,6 +216,8 @@ npm run seed -- \
 
 Supportgram runs as a single **Docker** service. By default it stores libSQL data in `./data/supportgram.db` beside `docker-compose.yml`; a remote Turso database remains optional. For a deployment in `/www/wwwroot/maitgsupportgram.888866.xyz`, the database is therefore `/www/wwwroot/maitgsupportgram.888866.xyz/data/supportgram.db`.
 
+Uploaded images and videos are stored in `./data/uploads`. Supported formats are JPG, PNG, WebP, MP4, WebM, and MOV. Images are limited to 10 MB, videos to 20 MB, and each conversation to 200 MB of media. If Nginx is in front of Docker, set `client_max_body_size 25m;` in the site configuration.
+
 ### Environment variables
 
 | Variable | Description |
@@ -248,6 +250,7 @@ Every push to `main` builds `ghcr.io/16188/supportgram:latest`; commit-SHA tags 
 | **Telegram** | Raw Bot API calls (no SDK) via webhooks |
 | **Email** | SendGrid transactional emails |
 | **Retention** | Indefinite; no automatic purge |
+| **Media** | Bidirectional images and videos, stored in `data/uploads` |
 
 ---
 

@@ -47,6 +47,11 @@ export const statements = [
     sender_label TEXT,
     body TEXT NOT NULL,
     tg_message_id INTEGER,
+    media_type TEXT,
+    media_path TEXT,
+    media_name TEXT,
+    media_mime TEXT,
+    media_size INTEGER,
     created_at TEXT DEFAULT (datetime('now'))
   )`,
 
@@ -61,4 +66,9 @@ export const statements = [
 // "duplicate column" errors are expected and ignored by the runner.
 export const migrations = [
   `ALTER TABLE businesses ADD COLUMN identity_secret TEXT`,
+  `ALTER TABLE messages ADD COLUMN media_type TEXT`,
+  `ALTER TABLE messages ADD COLUMN media_path TEXT`,
+  `ALTER TABLE messages ADD COLUMN media_name TEXT`,
+  `ALTER TABLE messages ADD COLUMN media_mime TEXT`,
+  `ALTER TABLE messages ADD COLUMN media_size INTEGER`,
 ];

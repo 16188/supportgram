@@ -28,6 +28,18 @@ function enforceOrigin(req, res, business) {
   return true;
 }
 
+function mediaPayload(message, token) {
+  if (!message.media_path) return null;
+  const storageName = String(message.media_path).split('/').pop();
+  return {
+    type: message.media_type,
+    name: message.media_name,
+    mime: message.media_mime,
+    size: Number(message.media_size) || 0,
+    url: `/api/c/${encodeURIComponent(token)}/media/${encodeURIComponent(storageName)}`,
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     if (req.headers.origin) {
@@ -67,6 +79,7 @@ export default async function handler(req, res) {
         direction: m.direction,
         sender: m.sender_label,
         body: m.body,
+        media: mediaPayload(m, token),
         at: m.created_at,
       }));
 

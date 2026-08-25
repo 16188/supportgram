@@ -32,6 +32,22 @@ function toObjects(result) {
   });
 }
 
+if (flags['sync-telegram']) {
+  const businesses = toObjects(await client.execute('SELECT * FROM businesses'));
+  for (const biz of businesses) {
+    await setMyCommands(biz.bot_token);
+    if (config.BASE_URL.startsWith('https://')) {
+      await setWebhook(
+        biz.bot_token,
+        `${config.BASE_URL}/api/tg/${biz.public_key}`,
+        biz.webhook_secret
+      );
+    }
+    console.log(`Synced Telegram settings: ${biz.name}`);
+  }
+  process.exit(0);
+}
+
 if (flags.list) {
   // List all businesses and agents
   const businesses = toObjects(await client.execute('SELECT * FROM businesses'));
@@ -70,6 +86,7 @@ if (!flags.name || !flags['bot-token'] || !flags.supergroup || !flags.origins) {
   console.error('Usage:');
   console.error('  node scripts/seed.mjs --name "Business Name" --bot-token BOT_TOKEN --supergroup -100123 --origins "https://domain1.com,https://domain2.com" [--agents "user1:Display1:username1,user2:Display2:"]');
   console.error('  node scripts/seed.mjs --list');
+  console.error('  node scripts/seed.mjs --sync-telegram');
   process.exit(1);
 }
 
@@ -133,7 +150,7 @@ if (config.BASE_URL.startsWith('https://')) {
 // Register agent commands for the "/" autocomplete menu
 try {
   await setMyCommands(flags['bot-token']);
-  console.log('  Agent commands registered (/close, /note, /delete)');
+  console.log('  Agent commands registered (/close, /note, /undo, /block, /unblock, /delete)');
 } catch (err) {
   console.error(`  setMyCommands FAILED: ${err.message}`);
 }

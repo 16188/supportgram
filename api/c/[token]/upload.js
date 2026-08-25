@@ -5,6 +5,7 @@ import {
   getConversationMediaBytes,
   getBusiness,
   getConversationByToken,
+  isVisitorBlocked,
 } from '../../../db/index.js';
 import { customerMedia } from '../../../lib/relay.js';
 import {
@@ -53,6 +54,9 @@ async function handler(req, res) {
   const business = await getBusiness(conversation.business_id);
   if (!business) return res.status(404).json({ error: '未找到该会话' });
   if (!enforceOrigin(req, res, business)) return;
+  if (await isVisitorBlocked(business.id, conversation.customer_email, conversation.ip_hash)) {
+    return res.status(403).json({ error: '无法上传文件' });
+  }
 
   const mime = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
   const declaredSize = Number(req.headers['content-length']) || 0;

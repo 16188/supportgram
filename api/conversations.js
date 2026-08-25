@@ -2,7 +2,12 @@
 // GET  /api/conversations?key&email&sig — verified-identity conversation list.
 
 import crypto from 'crypto';
-import { getBusinessByKey, countRecentConversationsByIp, listConversationsByEmail } from '../db/index.js';
+import {
+  getBusinessByKey,
+  countRecentConversationsByIp,
+  isVisitorBlocked,
+  listConversationsByEmail,
+} from '../db/index.js';
 import { startConversation } from '../lib/relay.js';
 
 // sig must be HMAC-SHA256(identity_secret, lowercase(email)) as hex — computed by the
@@ -110,6 +115,10 @@ export default async function handler(req, res) {
   // Per-IP rate limit: max 5 new conversations per hour.
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';
   const ipHash = crypto.createHash('sha256').update(ip).digest('hex').slice(0, 16);
+
+  if (await isVisitorBlocked(business.id, email.trim(), ipHash)) {
+    return res.status(403).json({ error: 'unable to start conversation' });
+  }
 
   const recent = await countRecentConversationsByIp(business.id, ipHash, 60);
   if (recent >= 5) {

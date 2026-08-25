@@ -55,11 +55,21 @@ export const statements = [
     created_at TEXT DEFAULT (datetime('now'))
   )`,
 
+  `CREATE TABLE IF NOT EXISTS blocked_visitors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id INTEGER NOT NULL REFERENCES businesses(id),
+    email TEXT NOT NULL,
+    ip_hash TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(business_id, email)
+  )`,
+
   `CREATE INDEX IF NOT EXISTS idx_conversations_resume_token ON conversations(resume_token)`,
   `CREATE INDEX IF NOT EXISTS idx_conversations_business_email ON conversations(business_id, customer_email)`,
   `CREATE INDEX IF NOT EXISTS idx_conversations_business_topic ON conversations(business_id, topic_id)`,
   `CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id)`,
   `CREATE INDEX IF NOT EXISTS idx_agents_business_active ON agents(business_id, active)`,
+  `CREATE INDEX IF NOT EXISTS idx_blocked_visitors_business_ip ON blocked_visitors(business_id, ip_hash)`,
 ];
 
 // Additive migrations for databases created before these columns existed.

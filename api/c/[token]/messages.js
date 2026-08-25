@@ -6,6 +6,7 @@ import {
   getBusiness,
   getMessages,
   countRecentMessages,
+  isVisitorBlocked,
   updateConversation,
 } from '../../../db/index.js';
 import { customerMessage } from '../../../lib/relay.js';
@@ -69,6 +70,12 @@ export default async function handler(req, res) {
 
   if (!enforceOrigin(req, res, business)) return;
 
+  const visitorBlocked = await isVisitorBlocked(
+    business.id,
+    conversation.customer_email,
+    conversation.ip_hash
+  );
+
   if (req.method === 'GET') {
     const after = parseInt(req.query.after, 10) || 0;
     const all = await getMessages(conversation.id);
@@ -90,10 +97,17 @@ export default async function handler(req, res) {
       console.error('messages: update last_seen_at failed:', err);
     }
 
-    return res.status(200).json({ status: conversation.status, messages });
+    return res.status(200).json({
+      status: visitorBlocked ? 'blocked' : conversation.status,
+      messages,
+    });
   }
 
   if (req.method === 'POST') {
+    if (visitorBlocked) {
+      return res.status(403).json({ error: 'unable to send message' });
+    }
+
     const { message } = req.body || {};
     if (!message || typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({ error: 'message is required' });

@@ -52,7 +52,7 @@ Most live chat tools force agents into yet another web inbox. Supportgram takes 
 2. A **Telegram forum topic** is created in your supergroup, with a pinned info card.
 3. Messages relay both ways: visitor to topic, agent replies back to the widget.
 4. If the visitor goes offline, they receive an **email with a resume link** to continue the conversation.
-5. Agents use `/close` to resolve, `/note` for internal-only messages, and `/delete confirm` for permanent deletion.
+5. Agents can edit replies directly, reply with `/undo` to retract one, use `/block` to blacklist a visitor, and use `/delete confirm` for permanent conversation deletion.
 
 ---
 
@@ -67,7 +67,7 @@ Most live chat tools force agents into yet another web inbox. Supportgram takes 
 | **HMAC verified identity** | Secure identity verification prevents spoofing of visitor details |
 | **Conversation history** | Visitors can see and resume past conversations from the widget |
 | **Email notifications** | Offline visitors get a "you have a reply" email with a one-click resume link |
-| **Agent commands** | `/close` to resolve, `/note` for internal messages, `/delete confirm` to permanently remove a conversation and its media |
+| **Agent controls** | Native reply editing, `/undo`, `/block`, `/unblock`, `/close`, `/note`, and `/delete confirm` |
 | **Customizable widget** | Accent color, title, greeting text — all configurable via attributes or JS |
 | **Origin allowlisting** | Widget requests are validated against registered domains (CORS + Origin check) |
 | **Persistent history** | Conversations and Telegram topics are not automatically deleted |
@@ -81,7 +81,7 @@ Most live chat tools force agents into yet another web inbox. Supportgram takes 
 
 - **Docker Engine with Docker Compose**
 - A **Telegram bot** (create one via [@BotFather](https://t.me/BotFather))
-- A **Telegram supergroup with Topics enabled** (the bot must be an admin with "Manage Topics" permission)
+- A **Telegram supergroup with Topics enabled** (the bot must be an admin with "Manage Topics" and "Delete Messages" permissions)
 
 ### 1. Clone and install
 

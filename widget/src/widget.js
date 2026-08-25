@@ -8,7 +8,6 @@
     tokens: [],            // all conversation tokens for this identity, oldest first
     token: null,           // active conversation
     messages: [],
-    lastMessageId: null,
     renderedCount: 0,
     conversationStatus: 'open',
     pollingInterval: null,
@@ -187,7 +186,6 @@
     stopPolling();
     state.token = null;
     state.messages = [];
-    state.lastMessageId = null;
     state.conversationStatus = 'open';
     state.unreadCount = 0;
 
@@ -983,7 +981,6 @@
   function openConversation(token) {
     state.token = token;
     state.messages = [];
-    state.lastMessageId = null;
     state.conversationStatus = 'open';
     state.view = 'chat';
     renderView();
@@ -995,7 +992,6 @@
     stopPolling();
     state.token = null;
     state.messages = [];
-    state.lastMessageId = null;
     state.conversationStatus = 'open';
     // Anyone we already know (identified, saved contact, or earlier form submit
     // this session) goes straight to chat; the conversation is created on first send.
@@ -1076,7 +1072,6 @@
         saveContact(name, email);
         state.conversationStatus = data.status || 'open';
         state.messages = [];
-        state.lastMessageId = null;
         state.unreadCount = 0;
         adoptNewToken(data.token);
 
@@ -1234,11 +1229,27 @@
       messagesDiv.appendChild(msgEl);
     });
 
-    if (state.conversationStatus === 'closed' && msgs.length > 0) {
+    if (['closed', 'blocked'].includes(state.conversationStatus) && msgs.length > 0) {
       const divider = document.createElement('div');
       divider.className = 'sg-divider';
-      divider.textContent = '会话已结束，发送消息可重新开启';
+      divider.textContent = state.conversationStatus === 'blocked'
+        ? '该会话已停止，无法继续发送消息'
+        : '会话已结束，发送消息可重新开启';
       messagesDiv.appendChild(divider);
+    }
+
+    const blocked = state.conversationStatus === 'blocked';
+    const input = document.getElementById('sg-input');
+    const send = document.getElementById('sg-send');
+    const attach = document.getElementById('sg-attach');
+    if (input) {
+      input.disabled = blocked;
+      input.placeholder = blocked ? '该会话已停止' : '请输入消息...';
+    }
+    if (send) send.disabled = blocked;
+    if (attach) {
+      attach.disabled = blocked || !state.token;
+      attach.title = blocked ? '该会话已停止' : (state.token ? '发送图片或视频' : '请先发送一条文字消息');
     }
 
     state.renderedCount = msgs.length;
@@ -1249,6 +1260,7 @@
     const textarea = document.getElementById('sg-input');
     const text = textarea.value.trim();
 
+    if (state.conversationStatus === 'blocked') return;
     if (!text) return;
     if (!state.token && !knowsContact()) return;
 
@@ -1320,6 +1332,7 @@
   }
 
   async function uploadMedia(file) {
+    if (state.conversationStatus === 'blocked') return;
     if (!state.token) return;
 
     const limit = MEDIA_LIMITS[file.type];
@@ -1366,12 +1379,7 @@
     const token = state.token;
 
     try {
-      const url = new URL(`${state.apiBase}/api/c/${token}/messages`);
-      if (state.lastMessageId) {
-        url.searchParams.append('after', state.lastMessageId);
-      }
-
-      const response = await fetch(url.toString());
+      const response = await fetch(`${state.apiBase}/api/c/${token}/messages`);
 
       if (response.status === 404) {
         // Token invalid or unknown; drop it and go home.
@@ -1379,7 +1387,6 @@
         saveTokens();
         state.token = null;
         state.messages = [];
-        state.lastMessageId = null;
         stopPolling();
         if (state.isOpen) {
           state.view = 'home';
@@ -1391,34 +1398,28 @@
       if (!response.ok || state.token !== token) return;
 
       const data = await response.json();
+      const statusChanged = state.conversationStatus !== (data.status || 'open');
       state.conversationStatus = data.status || 'open';
 
       if (Array.isArray(data.messages)) {
-        let changed = false;
-        data.messages.forEach((msg) => {
-          if (!state.messages.find((m) => m.id === msg.id)) {
-            // Reconcile optimistic sends: adopt the server id instead of duplicating the bubble.
-            const temp = msg.direction === 'in'
-              ? state.messages.find((m) => String(m.id).startsWith('temp-') && m.body === msg.body)
-              : null;
-            if (temp) {
-              temp.id = msg.id;
-              temp.at = msg.at;
-            } else {
-              state.messages.push(msg);
-              changed = true;
-              if (!state.isOpen && msg.direction === 'out') {
-                state.unreadCount++;
-              }
-            }
-            if (!state.lastMessageId || msg.id > state.lastMessageId) {
-              state.lastMessageId = msg.id;
-            }
-          }
-        });
+        // ponytail: full snapshots keep edits/deletions stateless; add revisions only if histories become large.
+        const current = state.messages.filter((msg) => !String(msg.id).startsWith('temp-'));
+        const knownIds = new Set(current.map((msg) => msg.id));
+        const pending = state.messages.filter((temp) =>
+          String(temp.id).startsWith('temp-') &&
+          !data.messages.some((msg) => msg.direction === 'in' && msg.body === temp.body)
+        );
+        const changed = JSON.stringify(current) !== JSON.stringify(data.messages);
+
+        if (!state.isOpen) {
+          state.unreadCount += data.messages.filter(
+            (msg) => msg.direction === 'out' && !knownIds.has(msg.id)
+          ).length;
+        }
+        state.messages = [...data.messages, ...pending];
 
         if (state.isOpen && state.view === 'chat') {
-          if (changed) renderMessages();
+          if (changed || statusChanged) renderMessages();
           state.unreadCount = 0;
         }
         updateBadge();

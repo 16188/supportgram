@@ -240,19 +240,17 @@ export default async function handler(req, res) {
 
   <script>
     const tokenData = ${jsonForScript({ token })};
-    const messagesData = ${messagesJson};
+    let messagesData = ${messagesJson};
     let conversationStatus = ${jsonForScript(conversation.status)};
-
-    let lastMessageId = 0;
 
     function renderMessages() {
       const container = document.getElementById('messages');
       container.innerHTML = '';
 
-      if (conversationStatus === 'closed') {
+      if (['closed', 'blocked'].includes(conversationStatus)) {
         const divider = document.createElement('div');
         divider.className = 'divider';
-        divider.textContent = '会话已结束';
+        divider.textContent = conversationStatus === 'blocked' ? '该会话已停止' : '会话已结束';
         container.appendChild(divider);
       }
 
@@ -295,9 +293,14 @@ export default async function handler(req, res) {
           div.appendChild(text);
         }
         container.appendChild(div);
-
-        lastMessageId = Math.max(lastMessageId, msg.id);
       });
+
+      const blocked = conversationStatus === 'blocked';
+      const input = document.getElementById('messageInput');
+      input.disabled = blocked;
+      input.placeholder = blocked ? '该会话已停止' : '请输入消息...';
+      document.getElementById('sendBtn').disabled = blocked;
+      document.getElementById('mediaBtn').disabled = blocked;
 
       container.scrollTop = container.scrollHeight;
     }
@@ -311,6 +314,7 @@ export default async function handler(req, res) {
     }
 
     async function sendMessage() {
+      if (conversationStatus === 'blocked') return;
       const input = document.getElementById('messageInput');
       const message = input.value.trim();
       if (!message) return;
@@ -336,11 +340,12 @@ export default async function handler(req, res) {
       } catch (err) {
         showError('网络错误，请稍后重试');
       } finally {
-        btn.disabled = false;
+        btn.disabled = conversationStatus === 'blocked';
       }
     }
 
     async function uploadMedia(file) {
+      if (conversationStatus === 'blocked') return;
       const limits = {
         'image/jpeg': 10 * 1024 * 1024,
         'image/png': 10 * 1024 * 1024,
@@ -371,7 +376,7 @@ export default async function handler(req, res) {
       } catch {
         showError('网络错误，请稍后重试');
       } finally {
-        btn.disabled = false;
+        btn.disabled = conversationStatus === 'blocked';
         btn.textContent = '发送图片或视频';
         document.getElementById('mediaInput').value = '';
       }
@@ -379,7 +384,7 @@ export default async function handler(req, res) {
 
     async function pollMessages() {
       try {
-        const response = await fetch('/api/c/' + tokenData.token + '/messages?after=' + lastMessageId);
+        const response = await fetch('/api/c/' + tokenData.token + '/messages');
         if (response.status === 404) {
           showError('未找到该会话');
           return;
@@ -387,13 +392,13 @@ export default async function handler(req, res) {
         if (!response.ok) return;
 
         const data = await response.json();
+        const statusChanged = conversationStatus !== (data.status || conversationStatus);
         conversationStatus = data.status || conversationStatus;
-        if (data.messages && data.messages.length > 0) {
-          data.messages.forEach((msg) => {
-            messagesData.push(msg);
-            lastMessageId = Math.max(lastMessageId, msg.id);
-          });
-          renderMessages();
+        if (Array.isArray(data.messages)) {
+          // ponytail: full snapshots keep edits/deletions stateless; add revisions only if histories become large.
+          const changed = JSON.stringify(messagesData) !== JSON.stringify(data.messages);
+          messagesData = data.messages;
+          if (changed || statusChanged) renderMessages();
         }
       } catch (err) {
         // Poll errors are silent

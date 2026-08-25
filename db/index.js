@@ -189,6 +189,34 @@ export async function countRecentMessages(conversationId, seconds) {
   return Number(row.count);
 }
 
+export async function isVisitorBlocked(businessId, email, ipHash) {
+  const row = firstRow(await q(
+    `SELECT 1 AS blocked FROM blocked_visitors
+     WHERE business_id = ?
+       AND (email = lower(?) OR (? != '' AND ip_hash = ?))
+     LIMIT 1`,
+    [businessId, email, ipHash || '', ipHash || '']
+  ));
+  return Boolean(row);
+}
+
+export async function blockVisitor(businessId, email, ipHash) {
+  await q(
+    `INSERT INTO blocked_visitors (business_id, email, ip_hash)
+     VALUES (?, lower(?), ?)
+     ON CONFLICT(business_id, email) DO UPDATE SET ip_hash = excluded.ip_hash`,
+    [businessId, email, ipHash || null]
+  );
+}
+
+export async function unblockVisitor(businessId, email) {
+  const result = await q(
+    'DELETE FROM blocked_visitors WHERE business_id = ? AND email = lower(?)',
+    [businessId, email]
+  );
+  return Number(result.rowsAffected) > 0;
+}
+
 export async function addMessage(fields) {
   const result = await q(
     `INSERT INTO messages
@@ -223,6 +251,27 @@ export async function addMessage(fields) {
     media_size: fields.media_size || null,
     created_at: new Date().toISOString(),
   };
+}
+
+export async function editAgentMessage(conversationId, telegramMessageId, body) {
+  const result = await q(
+    `UPDATE messages SET body = ?
+     WHERE conversation_id = ? AND tg_message_id = ? AND direction = 'out'`,
+    [body, conversationId, telegramMessageId]
+  );
+  return Number(result.rowsAffected) > 0;
+}
+
+export async function deleteAgentMessage(conversationId, telegramMessageId) {
+  const message = firstRow(await q(
+    `SELECT * FROM messages
+     WHERE conversation_id = ? AND tg_message_id = ? AND direction = 'out'
+     LIMIT 1`,
+    [conversationId, telegramMessageId]
+  ));
+  if (!message) return null;
+  await q('DELETE FROM messages WHERE id = ?', [message.id]);
+  return message;
 }
 
 export async function getConversationMediaBytes(conversationId) {

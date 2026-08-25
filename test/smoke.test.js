@@ -5,7 +5,7 @@ import test from 'node:test';
 import purge from '../api/cron/purge.js';
 import { byteRange } from '../api/c/[token]/media.js';
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, mediaRule } from '../lib/media.js';
-import { deleteCommand } from '../lib/relay.js';
+import { blockCommand, deleteCommand, undoCommand } from '../lib/relay.js';
 import { createAppServer } from '../server.js';
 
 test('VPS server exposes a health check', async (t) => {
@@ -89,4 +89,25 @@ test('permanent deletion requires an explicit confirmation command', () => {
   assert.equal(deleteCommand('/delete@support_bot confirm'), 'confirm');
   assert.equal(deleteCommand('/delete maybe'), 'prompt');
   assert.equal(deleteCommand('/close'), null);
+});
+
+test('agent message correction and blacklist commands are explicit', async () => {
+  assert.equal(undoCommand('/undo'), true);
+  assert.equal(undoCommand('/undo@support_bot'), true);
+  assert.equal(undoCommand('/undo now'), false);
+  assert.equal(blockCommand('/block'), 'block');
+  assert.equal(blockCommand('/unblock@support_bot'), 'unblock');
+  assert.equal(blockCommand('/block confirm'), null);
+
+  const relay = await readFile(new URL('../lib/relay.js', import.meta.url), 'utf8');
+  assert.match(relay, /update\?\.edited_message/);
+  assert.match(relay, /deleteAgentMessage/);
+
+  const widget = await readFile(new URL('../widget/src/widget.js', import.meta.url), 'utf8');
+  const resume = await readFile(new URL('../api/resume.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(widget, /searchParams\.append\('after'/);
+  assert.doesNotMatch(resume, /messages\?after=/);
+
+  const schema = await readFile(new URL('../db/schema.js', import.meta.url), 'utf8');
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS blocked_visitors/);
 });

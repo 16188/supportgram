@@ -2,6 +2,7 @@
 
 ## 2026-08-25
 
+- Added a synthesized notification chime for new agent replies, including background polling after visitor interaction.
 - Fixed edited Telegram replies not synchronizing when topic metadata was absent, and disabled caching for the widget and message polling API.
 - Added Telegram reply editing, `/undo` message retraction, and reversible `/block` visitor blacklisting with website synchronization.
 - Added a Chinese VPS installation, update, backup, troubleshooting, and maintenance guide.

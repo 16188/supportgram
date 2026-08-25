@@ -8,11 +8,12 @@
     tokens: [],            // all conversation tokens for this identity, oldest first
     token: null,           // active conversation
     messages: [],
+    loadedToken: null,
     renderedCount: 0,
     conversationStatus: 'open',
     pollingInterval: null,
     pollingRate: 3000,     // 3s when chat open
-    backgroundRate: 30000, // 30s when panel closed
+    backgroundRate: 10000, // 10s when panel closed or page hidden
     unreadCount: 0,
     isOpen: false,
     view: 'home',          // 'home' | 'chat' | 'form'
@@ -28,6 +29,8 @@
     teaserKey: null,
     teaserEl: null,
   };
+
+  let audioContext = null;
 
   const MEDIA_LIMITS = {
     'image/jpeg': 10 * 1024 * 1024,
@@ -186,6 +189,7 @@
     stopPolling();
     state.token = null;
     state.messages = [];
+    state.loadedToken = null;
     state.conversationStatus = 'open';
     state.unreadCount = 0;
 
@@ -762,14 +766,23 @@
 
   /* ---------------- teaser (proactive greeting) ---------------- */
 
-  // Soft two-note chime, synthesized (no audio asset). Best-effort: browsers
-  // block audio until the visitor has interacted with the page at least once.
-  function playChime() {
+  function unlockAudio() {
     try {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
-      const ctx = new Ctx();
-      if (ctx.state === 'suspended') { ctx.close(); return; }
+      if (!audioContext) audioContext = new Ctx();
+      if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+    } catch { /* audio is optional */ }
+  }
+
+  // Soft two-note chime, synthesized (no audio asset). Browsers require one
+  // visitor interaction before audio can play; unlockAudio handles that once.
+  async function playChime() {
+    try {
+      const ctx = audioContext;
+      if (!ctx) return;
+      if (ctx.state === 'suspended') await ctx.resume();
+      if (ctx.state !== 'running') return;
       const gain = ctx.createGain();
       gain.connect(ctx.destination);
       gain.gain.setValueAtTime(0, ctx.currentTime);
@@ -783,7 +796,6 @@
         osc.start(ctx.currentTime + delay);
         osc.stop(ctx.currentTime + delay + 0.35);
       });
-      setTimeout(() => ctx.close(), 700);
     } catch { /* never let sound break the widget */ }
   }
 
@@ -981,6 +993,7 @@
   function openConversation(token) {
     state.token = token;
     state.messages = [];
+    state.loadedToken = null;
     state.conversationStatus = 'open';
     state.view = 'chat';
     renderView();
@@ -992,6 +1005,7 @@
     stopPolling();
     state.token = null;
     state.messages = [];
+    state.loadedToken = null;
     state.conversationStatus = 'open';
     // Anyone we already know (identified, saved contact, or earlier form submit
     // this session) goes straight to chat; the conversation is created on first send.
@@ -1001,6 +1015,7 @@
 
   function adoptNewToken(token) {
     state.token = token;
+    state.loadedToken = token;
     state.tokens.push(token);
     saveTokens();
     const attachBtn = document.getElementById('sg-attach');
@@ -1387,6 +1402,7 @@
         saveTokens();
         state.token = null;
         state.messages = [];
+        state.loadedToken = null;
         stopPolling();
         if (state.isOpen) {
           state.view = 'home';
@@ -1405,6 +1421,10 @@
         // ponytail: full snapshots keep edits/deletions stateless; add revisions only if histories become large.
         const current = state.messages.filter((msg) => !String(msg.id).startsWith('temp-'));
         const knownIds = new Set(current.map((msg) => msg.id));
+        const initialSync = state.loadedToken !== token;
+        const newAgentMessages = data.messages.filter(
+          (msg) => msg.direction === 'out' && !knownIds.has(msg.id)
+        );
         const pending = state.messages.filter((temp) =>
           String(temp.id).startsWith('temp-') &&
           !data.messages.some((msg) => msg.direction === 'in' && msg.body === temp.body)
@@ -1412,11 +1432,11 @@
         const changed = JSON.stringify(current) !== JSON.stringify(data.messages);
 
         if (!state.isOpen) {
-          state.unreadCount += data.messages.filter(
-            (msg) => msg.direction === 'out' && !knownIds.has(msg.id)
-          ).length;
+          state.unreadCount += newAgentMessages.length;
         }
         state.messages = [...data.messages, ...pending];
+        state.loadedToken = token;
+        if (!initialSync && newAgentMessages.length > 0) playChime();
 
         if (state.isOpen && state.view === 'chat') {
           if (changed || statusChanged) renderMessages();
@@ -1442,12 +1462,10 @@
 
   function startPolling() {
     stopPolling();
-    const poll = () => {
-      if (!document.hidden) fetchMessages();
-    };
+    const poll = () => fetchMessages();
     state.pollingInterval = setInterval(
       poll,
-      state.isOpen ? state.pollingRate : state.backgroundRate
+      !document.hidden && state.isOpen ? state.pollingRate : state.backgroundRate
     );
     poll();
   }
@@ -1488,9 +1506,7 @@
   }
 
   function handleVisibilityChange() {
-    if (document.hidden) {
-      stopPolling();
-    } else if (state.token) {
+    if (state.token) {
       fetchMessages();
       startPolling();
     }
@@ -1502,6 +1518,8 @@
     injectStyles();
     createLauncher();
     createPanel();
+    window.addEventListener('pointerdown', unlockAudio, { once: true, passive: true });
+    window.addEventListener('keydown', unlockAudio, { once: true });
 
     // Resume the most recent conversation as the active one for background unread polling.
     if (state.tokens.length > 0) {

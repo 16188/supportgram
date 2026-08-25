@@ -38,6 +38,9 @@ test('widget defaults to Chinese and uses the MAITG logo', async () => {
   assert.match(source, /客服在线时间（北京时间）：9:00-20:00，其他时间随机上线/);
   assert.match(source, /maitg-logo\.png/);
   assert.match(source, /launcher\.innerHTML = `\s*<svg/);
+  assert.match(source, /newAgentMessages\.length > 0\) playChime\(\)/);
+  assert.match(source, /window\.addEventListener\('pointerdown', unlockAudio/);
+  assert.match(source, /backgroundRate: 10000/);
   assert.doesNotMatch(source, /Send a Message|We'll respond as soon as we can/);
 });
 

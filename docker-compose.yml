@@ -1,7 +1,6 @@
 services:
   supportgram:
-    image: ghcr.io/16188/supportgram:latest
-    pull_policy: always
+    image: ghcr.io/16188/supportgram:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file:
       - .env

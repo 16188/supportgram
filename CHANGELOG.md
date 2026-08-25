@@ -2,6 +2,7 @@
 
 ## 2026-08-25
 
+- Added one-command VPS deployment and rollback scripts that preserve the previously running Docker image without changing persistent data.
 - Replaced the quiet synthesized chime with the supplied full-volume `voice.mp3` notification sound.
 - Added a synthesized notification chime for new agent replies, including background polling after visitor interaction.
 - Fixed edited Telegram replies not synchronizing when topic metadata was absent, and disabled caching for the widget and message polling API.

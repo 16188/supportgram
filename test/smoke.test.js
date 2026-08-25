@@ -76,6 +76,15 @@ test('Docker stores the database beside the deployment files', async () => {
   assert.doesNotMatch(compose, /supportgram_data/);
 });
 
+test('VPS deployment keeps one local image for one-command rollback', async () => {
+  const compose = await readFile(new URL('../docker-compose.yml', import.meta.url), 'utf8');
+  const deploy = await readFile(new URL('../scripts/deploy.sh', import.meta.url), 'utf8');
+  const rollback = await readFile(new URL('../scripts/rollback.sh', import.meta.url), 'utf8');
+  assert.match(compose, /\$\{IMAGE_TAG:-latest\}/);
+  assert.match(deploy, /docker image tag .*rollback-local/);
+  assert.match(rollback, /IMAGE_TAG=rollback-local docker compose up .*--pull never/);
+});
+
 test('media uploads accept only supported images and videos within Telegram-safe limits', async () => {
   assert.equal(mediaRule('image/png', MAX_IMAGE_BYTES).type, 'image');
   assert.equal(mediaRule('video/mp4', MAX_VIDEO_BYTES).type, 'video');

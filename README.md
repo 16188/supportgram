@@ -52,7 +52,7 @@ Most live chat tools force agents into yet another web inbox. Supportgram takes 
 2. A **Telegram forum topic** is created in your supergroup, with a pinned info card.
 3. Messages relay both ways: visitor to topic, agent replies back to the widget.
 4. If the visitor goes offline, they receive an **email with a resume link** to continue the conversation.
-5. Agents use `/close` to resolve and `/note` for internal-only messages.
+5. Agents use `/close` to resolve, `/note` for internal-only messages, and `/delete confirm` for permanent deletion.
 
 ---
 
@@ -67,7 +67,7 @@ Most live chat tools force agents into yet another web inbox. Supportgram takes 
 | **HMAC verified identity** | Secure identity verification prevents spoofing of visitor details |
 | **Conversation history** | Visitors can see and resume past conversations from the widget |
 | **Email notifications** | Offline visitors get a "you have a reply" email with a one-click resume link |
-| **Agent commands** | `/close` to resolve, `/note` for internal messages never shown to visitors |
+| **Agent commands** | `/close` to resolve, `/note` for internal messages, `/delete confirm` to permanently remove a conversation and its media |
 | **Customizable widget** | Accent color, title, greeting text — all configurable via attributes or JS |
 | **Origin allowlisting** | Widget requests are validated against registered domains (CORS + Origin check) |
 | **Persistent history** | Conversations and Telegram topics are not automatically deleted |

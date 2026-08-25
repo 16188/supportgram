@@ -256,6 +256,10 @@ export async function getExpiredConversations(days) {
 
 export async function deleteConversationCascade(id) {
   await ready();
+  const mediaRows = toObjects(await q(
+    'SELECT DISTINCT media_path FROM messages WHERE conversation_id = ? AND media_path IS NOT NULL',
+    [id]
+  ));
   await client.batch(
     [
       { sql: 'DELETE FROM messages WHERE conversation_id = ?', args: [id] },
@@ -263,6 +267,7 @@ export async function deleteConversationCascade(id) {
     ],
     'write'
   );
+  return mediaRows.map((row) => row.media_path);
 }
 
 export default client;

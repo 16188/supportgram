@@ -133,7 +133,7 @@ if (config.BASE_URL.startsWith('https://')) {
 // Register agent commands for the "/" autocomplete menu
 try {
   await setMyCommands(flags['bot-token']);
-  console.log('  Agent commands registered (/close, /note)');
+  console.log('  Agent commands registered (/close, /note, /delete)');
 } catch (err) {
   console.error(`  setMyCommands FAILED: ${err.message}`);
 }

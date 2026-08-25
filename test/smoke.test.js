@@ -5,6 +5,7 @@ import test from 'node:test';
 import purge from '../api/cron/purge.js';
 import { byteRange } from '../api/c/[token]/media.js';
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, mediaRule } from '../lib/media.js';
+import { deleteCommand } from '../lib/relay.js';
 import { createAppServer } from '../server.js';
 
 test('VPS server exposes a health check', async (t) => {
@@ -80,4 +81,12 @@ test('media uploads accept only supported images and videos within Telegram-safe
 
   const schema = await readFile(new URL('../db/schema.js', import.meta.url), 'utf8');
   assert.match(schema, /media_path TEXT/);
+});
+
+test('permanent deletion requires an explicit confirmation command', () => {
+  assert.equal(deleteCommand('/delete'), 'prompt');
+  assert.equal(deleteCommand('/delete confirm'), 'confirm');
+  assert.equal(deleteCommand('/delete@support_bot confirm'), 'confirm');
+  assert.equal(deleteCommand('/delete maybe'), 'prompt');
+  assert.equal(deleteCommand('/close'), null);
 });

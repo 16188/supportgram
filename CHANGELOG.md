@@ -2,6 +2,7 @@
 
 ## 2026-08-25
 
+- Added the agent-only `/delete confirm` command to permanently remove a conversation, its VPS media files, and its Telegram topic.
 - Added the Beijing-time customer service hours to the widget home screen.
 - Added bidirectional image and video messaging between the website widget and Telegram, with media stored in `data/uploads`.
 - Changed the proactive chat action label to `我要咨询`.

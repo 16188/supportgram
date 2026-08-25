@@ -407,6 +407,12 @@
         font-size: 13px;
         opacity: 0.95;
       }
+      .sg-home-hours {
+        margin-top: 4px;
+        font-size: 11.5px;
+        line-height: 1.4;
+        opacity: 0.85;
+      }
       .sg-recent {
         margin: 14px 14px 0;
         background: white;
@@ -871,6 +877,7 @@
         <div class="sg-home-hero">
           <div class="sg-avatar"><img class="sg-brand-logo" src="${state.apiBase}/maitg-logo.png" alt="MAITG"></div>
           <div class="sg-home-sub">我们会尽快回复您。</div>
+          <div class="sg-home-hours">客服在线时间（北京时间）：9:00-20:00，其他时间随机上线</div>
         </div>
         <div id="sg-recent-wrap"></div>
         <div class="sg-home-footer">

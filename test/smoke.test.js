@@ -27,6 +27,11 @@ test('VPS server exposes a health check', async (t) => {
   assert.equal(logo.status, 200);
   assert.equal(logo.headers.get('content-type'), 'image/png');
 
+  const voice = await fetch(`http://127.0.0.1:${server.address().port}/voice.mp3`);
+  assert.equal(voice.status, 200);
+  assert.equal(voice.headers.get('content-type'), 'audio/mpeg');
+  assert.ok((await voice.arrayBuffer()).byteLength > 0);
+
   const invalidUrl = await fetch(`http://127.0.0.1:${server.address().port}/%E0%A4%A`);
   assert.equal(invalidUrl.status, 400);
 });
@@ -38,8 +43,10 @@ test('widget defaults to Chinese and uses the MAITG logo', async () => {
   assert.match(source, /客服在线时间（北京时间）：9:00-20:00，其他时间随机上线/);
   assert.match(source, /maitg-logo\.png/);
   assert.match(source, /launcher\.innerHTML = `\s*<svg/);
-  assert.match(source, /newAgentMessages\.length > 0\) playChime\(\)/);
-  assert.match(source, /window\.addEventListener\('pointerdown', unlockAudio/);
+  assert.match(source, /newAgentMessages\.length > 0\) playNotificationSound\(\)/);
+  assert.match(source, /new Audio\(`\$\{state\.apiBase\}\/voice\.mp3`\)/);
+  assert.match(source, /notificationAudio\.volume = 1/);
+  assert.doesNotMatch(source, /createOscillator|linearRampToValueAtTime\(0\.06/);
   assert.match(source, /backgroundRate: 10000/);
   assert.doesNotMatch(source, /Send a Message|We'll respond as soon as we can/);
 });

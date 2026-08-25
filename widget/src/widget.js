@@ -30,7 +30,7 @@
     teaserEl: null,
   };
 
-  let audioContext = null;
+  let notificationAudio = null;
 
   const MEDIA_LIMITS = {
     'image/jpeg': 10 * 1024 * 1024,
@@ -766,36 +766,24 @@
 
   /* ---------------- teaser (proactive greeting) ---------------- */
 
-  function unlockAudio() {
+  function prepareNotificationAudio() {
     try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      if (!audioContext) audioContext = new Ctx();
-      if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+      if (!notificationAudio) {
+        notificationAudio = new Audio(`${state.apiBase}/voice.mp3`);
+        notificationAudio.preload = 'auto';
+        notificationAudio.volume = 1;
+      }
+      return notificationAudio;
     } catch { /* audio is optional */ }
   }
 
-  // Soft two-note chime, synthesized (no audio asset). Browsers require one
-  // visitor interaction before audio can play; unlockAudio handles that once.
-  async function playChime() {
+  function playNotificationSound() {
     try {
-      const ctx = audioContext;
-      if (!ctx) return;
-      if (ctx.state === 'suspended') await ctx.resume();
-      if (ctx.state !== 'running') return;
-      const gain = ctx.createGain();
-      gain.connect(ctx.destination);
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45);
-      [[880, 0], [1174.7, 0.12]].forEach(([freq, delay]) => {
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        osc.connect(gain);
-        osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 0.35);
-      });
+      const audio = prepareNotificationAudio();
+      if (!audio) return;
+      audio.currentTime = 0;
+      const playback = audio.play();
+      if (playback?.catch) playback.catch(() => {});
     } catch { /* never let sound break the widget */ }
   }
 
@@ -857,7 +845,7 @@
       badge.textContent = '1';
       badge.classList.remove('hidden');
     }
-    playChime();
+    playNotificationSound();
   }
 
   /* ---------------- views ---------------- */
@@ -1436,7 +1424,7 @@
         }
         state.messages = [...data.messages, ...pending];
         state.loadedToken = token;
-        if (!initialSync && newAgentMessages.length > 0) playChime();
+        if (!initialSync && newAgentMessages.length > 0) playNotificationSound();
 
         if (state.isOpen && state.view === 'chat') {
           if (changed || statusChanged) renderMessages();
@@ -1518,8 +1506,8 @@
     injectStyles();
     createLauncher();
     createPanel();
-    window.addEventListener('pointerdown', unlockAudio, { once: true, passive: true });
-    window.addEventListener('keydown', unlockAudio, { once: true });
+    window.addEventListener('pointerdown', prepareNotificationAudio, { once: true, passive: true });
+    window.addEventListener('keydown', prepareNotificationAudio, { once: true });
 
     // Resume the most recent conversation as the active one for background unread polling.
     if (state.tokens.length > 0) {

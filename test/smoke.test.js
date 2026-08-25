@@ -30,6 +30,7 @@ test('widget defaults to Chinese and uses the MAITG logo', async () => {
   const source = await readFile(new URL('../widget/src/widget.js', import.meta.url), 'utf8');
   assert.match(source, /联系我们/);
   assert.match(source, /maitg-logo\.png/);
+  assert.match(source, /launcher\.innerHTML = `\s*<svg/);
   assert.doesNotMatch(source, /Send a Message|We'll respond as soon as we can/);
 });
 

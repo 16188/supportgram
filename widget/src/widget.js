@@ -256,10 +256,6 @@
         object-fit: cover;
         background: white;
       }
-      .sg-launcher-logo {
-        width: 50px;
-        height: 50px;
-      }
       .sg-launcher-badge {
         position: absolute;
         top: -6px;
@@ -692,7 +688,9 @@
     launcher.id = 'sg-launcher';
     launcher.setAttribute('aria-label', '打开在线客服');
     launcher.innerHTML = `
-      <img class="sg-brand-logo sg-launcher-logo" src="${state.apiBase}/maitg-logo.png" alt="MAITG">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
       <div class="sg-launcher-badge hidden" id="sg-badge">0</div>
     `;
     launcher.addEventListener('click', togglePanel);

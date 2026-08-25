@@ -102,6 +102,7 @@ test('agent message correction and blacklist commands are explicit', async () =>
   const relay = await readFile(new URL('../lib/relay.js', import.meta.url), 'utf8');
   assert.match(relay, /update\?\.edited_message/);
   assert.match(relay, /deleteAgentMessage/);
+  assert.ok(relay.indexOf('if (edited)') < relay.indexOf('if (!msg.message_thread_id)'));
 
   const widget = await readFile(new URL('../widget/src/widget.js', import.meta.url), 'utf8');
   const resume = await readFile(new URL('../api/resume.js', import.meta.url), 'utf8');
@@ -110,4 +111,11 @@ test('agent message correction and blacklist commands are explicit', async () =>
 
   const schema = await readFile(new URL('../db/schema.js', import.meta.url), 'utf8');
   assert.match(schema, /CREATE TABLE IF NOT EXISTS blocked_visitors/);
+
+  const messagesApi = await readFile(new URL('../api/c/[token]/messages.js', import.meta.url), 'utf8');
+  assert.match(messagesApi, /Cache-Control', 'no-store/);
+
+  const server = await readFile(new URL('../server.js', import.meta.url), 'utf8');
+  assert.match(server, /relative === 'widget\.js'/);
+  assert.match(server, /no-cache, no-store, must-revalidate/);
 });

@@ -104,6 +104,9 @@ async function servePublic(pathname, res) {
 
   res.statusCode = 200;
   res.setHeader('Content-Type', types[extname(file)] || 'application/octet-stream');
+  if (relative === 'widget.js') {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  }
   createReadStream(file).pipe(res);
   return true;
 }

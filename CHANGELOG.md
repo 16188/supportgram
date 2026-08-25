@@ -2,6 +2,7 @@
 
 ## 2026-08-25
 
+- Fixed edited Telegram replies not synchronizing when topic metadata was absent, and disabled caching for the widget and message polling API.
 - Added Telegram reply editing, `/undo` message retraction, and reversible `/block` visitor blacklisting with website synchronization.
 - Added a Chinese VPS installation, update, backup, troubleshooting, and maintenance guide.
 - Added the agent-only `/delete confirm` command to permanently remove a conversation, its VPS media files, and its Telegram topic.

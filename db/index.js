@@ -253,11 +253,12 @@ export async function addMessage(fields) {
   };
 }
 
-export async function editAgentMessage(conversationId, telegramMessageId, body) {
+export async function editAgentMessageByBusiness(businessId, telegramMessageId, body) {
   const result = await q(
     `UPDATE messages SET body = ?
-     WHERE conversation_id = ? AND tg_message_id = ? AND direction = 'out'`,
-    [body, conversationId, telegramMessageId]
+     WHERE tg_message_id = ? AND direction = 'out'
+       AND conversation_id IN (SELECT id FROM conversations WHERE business_id = ?)`,
+    [body, telegramMessageId, businessId]
   );
   return Number(result.rowsAffected) > 0;
 }

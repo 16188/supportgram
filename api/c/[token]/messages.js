@@ -77,6 +77,7 @@ export default async function handler(req, res) {
   );
 
   if (req.method === 'GET') {
+    res.setHeader('Cache-Control', 'no-store');
     const after = parseInt(req.query.after, 10) || 0;
     const all = await getMessages(conversation.id);
     const messages = all

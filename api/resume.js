@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
   const token = req.query.token;
   if (!token || typeof token !== 'string') {
-    return res.status(400).html('<!DOCTYPE html><html><head><title>Invalid Link</title></head><body>This conversation link is invalid or expired.</body></html>');
+    return res.status(400).html('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>链接无效</title></head><body>此会话链接无效或已过期。</body></html>');
   }
 
   let conversation;
@@ -32,18 +32,18 @@ export default async function handler(req, res) {
   try {
     conversation = await getConversationByToken(token);
     if (!conversation) {
-      return res.status(404).setHeader('Content-Type', 'text/html').send('<!DOCTYPE html><html><head><title>Invalid Link</title></head><body>This conversation link is invalid or expired.</body></html>');
+      return res.status(404).setHeader('Content-Type', 'text/html').send('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>链接无效</title></head><body>此会话链接无效或已过期。</body></html>');
     }
 
     business = await getBusiness(conversation.business_id);
     if (!business) {
-      return res.status(404).setHeader('Content-Type', 'text/html').send('<!DOCTYPE html><html><head><title>Invalid Link</title></head><body>This conversation link is invalid or expired.</body></html>');
+      return res.status(404).setHeader('Content-Type', 'text/html').send('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>链接无效</title></head><body>此会话链接无效或已过期。</body></html>');
     }
 
     messages = await getMessages(conversation.id);
   } catch (err) {
     console.error('resume: lookup failed:', err);
-    return res.status(500).setHeader('Content-Type', 'text/html').send('<!DOCTYPE html><html><head><title>Error</title></head><body>An error occurred. Please try again.</body></html>');
+    return res.status(500).setHeader('Content-Type', 'text/html').send('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>发生错误</title></head><body>发生错误，请稍后重试。</body></html>');
   }
 
   const businessNameEsc = escapeHtml(business.name);
@@ -53,18 +53,19 @@ export default async function handler(req, res) {
       .map((m) => ({
         id: Number(m.id),
         direction: m.direction,
-        sender: m.sender_label || (m.direction === 'in' ? conversation.customer_name : 'Agent'),
+        sender: m.sender_label || (m.direction === 'in' ? conversation.customer_name : '客服'),
         body: m.body,
         at: m.created_at,
       }))
   );
 
   const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Conversation with ${businessNameEsc}</title>
+  <title>与 ${businessNameEsc} 的会话</title>
+  <link rel="icon" href="/maitg-logo.png">
   <style>
     * { box-sizing: border-box; }
     body {
@@ -201,13 +202,13 @@ export default async function handler(req, res) {
 <body>
   <div class="container">
     <div class="header">
-      <h1>Conversation with ${businessNameEsc}</h1>
+      <h1>与 ${businessNameEsc} 的会话</h1>
     </div>
     <div class="messages" id="messages"></div>
     <div class="input-area" id="inputArea">
-      <textarea id="messageInput" placeholder="Type your message..." maxlength="4000"></textarea>
+      <textarea id="messageInput" placeholder="请输入消息..." maxlength="4000"></textarea>
       <div class="button-row">
-        <button id="sendBtn">Send</button>
+        <button id="sendBtn">发送</button>
       </div>
       <div id="error"></div>
     </div>
@@ -227,7 +228,7 @@ export default async function handler(req, res) {
       if (conversationStatus === 'closed') {
         const divider = document.createElement('div');
         divider.className = 'divider';
-        divider.textContent = 'Conversation ended';
+        divider.textContent = '会话已结束';
         container.appendChild(divider);
       }
 
@@ -238,7 +239,7 @@ export default async function handler(req, res) {
         if (msg.direction === 'out') {
           const sender = document.createElement('div');
           sender.className = 'sender';
-          sender.textContent = msg.sender || 'Agent';
+          sender.textContent = msg.sender || '客服';
           div.appendChild(sender);
         }
 
@@ -278,14 +279,14 @@ export default async function handler(req, res) {
 
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          showError(data.error || 'Failed to send message');
+          showError(data.error || '消息发送失败');
           return;
         }
 
         input.value = '';
         pollMessages();
       } catch (err) {
-        showError('Network error');
+        showError('网络错误，请稍后重试');
       } finally {
         btn.disabled = false;
       }
@@ -295,7 +296,7 @@ export default async function handler(req, res) {
       try {
         const response = await fetch('/api/c/' + tokenData.token + '/messages?after=' + lastMessageId);
         if (response.status === 404) {
-          showError('Conversation not found');
+          showError('未找到该会话');
           return;
         }
         if (!response.ok) return;

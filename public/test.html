@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Supportgram Widget Test</title>
+  <title>Supportgram 客服组件测试</title>
+  <link rel="icon" href="/maitg-logo.png">
   <style>
     * {
       margin: 0;
@@ -66,37 +67,37 @@
 </head>
 <body>
   <div class="container">
-    <h1>Supportgram Widget Test</h1>
+    <h1>Supportgram 客服组件测试</h1>
 
     <div class="instructions">
-      <p>This page demonstrates the Supportgram embeddable chat widget. The widget is loaded via a single <code>&lt;script&gt;</code> tag and provides live chat functionality on any website.</p>
+      <p>此页面用于演示 Supportgram 嵌入式客服组件。只需一行 <code>&lt;script&gt;</code> 标签，即可在任意网站中加入在线客服功能。</p>
 
-      <h2 style="margin-top: 24px; margin-bottom: 12px; font-size: 16px; color: #333;">How to embed the widget:</h2>
+      <h2 style="margin-top: 24px; margin-bottom: 12px; font-size: 16px; color: #333;">如何嵌入客服组件：</h2>
 
-      <p style="margin-bottom: 12px;">Add this line to your website (before the closing <code>&lt;/body&gt;</code> tag):</p>
+      <p style="margin-bottom: 12px;">将下面这行代码添加到网站的 <code>&lt;/body&gt;</code> 结束标签之前：</p>
 
       <div class="code-block">
-&lt;script src="https://supportgram.io/widget.js" data-key="YOUR_PUBLIC_KEY"&gt;&lt;/script&gt;
+&lt;script src="https://maitgsupportgram.888866.xyz/widget.js" data-key="你的公开密钥"&gt;&lt;/script&gt;
       </div>
 
-      <h2 style="margin-top: 24px; margin-bottom: 12px; font-size: 16px; color: #333;">Parameters:</h2>
+      <h2 style="margin-top: 24px; margin-bottom: 12px; font-size: 16px; color: #333;">参数说明：</h2>
 
       <ul style="margin-left: 20px; margin-bottom: 12px; line-height: 1.8;">
-        <li><strong>src</strong> — The URL to the widget script. The origin is used to construct the API base URL.</li>
-        <li><strong>data-key</strong> — Your public business key. This identifies which tenant/business the conversation belongs to.</li>
+        <li><strong>src</strong> — 客服组件脚本地址，系统会使用该地址的域名作为 API 地址。</li>
+        <li><strong>data-key</strong> — 公开业务密钥，用于识别会话所属的网站或商户。</li>
       </ul>
 
       <div class="note">
-        <strong>Local testing:</strong> With <code>npm start</code>, this page serves at <code>http://localhost:3000/test.html</code>. Update the script <code>data-key</code> to a valid public key from your database.
+        <strong>本地测试：</strong>运行 <code>npm start</code> 后，可访问 <code>http://localhost:3000/test.html</code>。请将脚本中的 <code>data-key</code> 改为数据库里的有效公开密钥。
       </div>
 
       <div class="success">
-        <strong>Widget loaded!</strong> Look for the blue chat bubble in the bottom-right corner of this page. Click to start a conversation.
+        <strong>客服组件已加载！</strong>请查看页面右下角的客服图标，点击后即可开始会话。
       </div>
     </div>
   </div>
 
-  <!-- Replace pk_7ddc4b6bdd4ed3331af1cdf7 with an actual public key from the database -->
-  <script src="/widget.js" data-key="pk_7ddc4b6bdd4ed3331af1cdf7"></script>
+  <!-- 请将下面的密钥替换为数据库中的实际公开密钥 -->
+  <script src="/widget.js" data-key="pk_7ddc4b6bdd4ed3331af1cdf7" data-title="联系我们" data-greeting="您好，请问有什么可以帮您？"></script>
 </body>
 </html>

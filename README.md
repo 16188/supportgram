@@ -214,7 +214,7 @@ npm run seed -- \
 
 ## Deployment
 
-Supportgram runs as a single **Docker** service. By default it stores libSQL data in a persistent Docker volume; a remote Turso database remains optional.
+Supportgram runs as a single **Docker** service. By default it stores libSQL data in `./data/supportgram.db` beside `docker-compose.yml`; a remote Turso database remains optional. For a deployment in `/www/wwwroot/maitgsupportgram.888866.xyz`, the database is therefore `/www/wwwroot/maitgsupportgram.888866.xyz/data/supportgram.db`.
 
 ### Environment variables
 
@@ -228,8 +228,10 @@ Supportgram runs as a single **Docker** service. By default it stores libSQL dat
 ### Upgrade
 
 ```bash
+mkdir -p data
+chown -R 1000:1000 data
 docker compose pull
-docker compose up -d
+docker compose up -d --force-recreate
 ```
 
 Every push to `main` builds `ghcr.io/16188/supportgram:latest`; commit-SHA tags are also published. Automatic data deletion is disabled.

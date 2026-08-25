@@ -23,8 +23,8 @@
     hmac: null,
     accent: '#1E8FD5',
     offset: 20,
-    title: 'Contact Us',
-    greeting: 'Let me know if you have any questions!',
+    title: '联系我们',
+    greeting: '您好，请问有什么可以帮您？',
     storageKey: null,      // JSON array of tokens
     teaserKey: null,
     teaserEl: null,
@@ -247,6 +247,18 @@
       .sg-launcher:hover {
         transform: scale(1.05);
         box-shadow: 0 4px 16px color-mix(in srgb, var(--sg-accent) 60%, transparent);
+      }
+      .sg-brand-logo {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        background: white;
+      }
+      .sg-launcher-logo {
+        width: 50px;
+        height: 50px;
       }
       .sg-launcher-badge {
         position: absolute;
@@ -545,6 +557,7 @@
         align-items: center;
         justify-content: center;
         flex: 0 0 26px;
+        object-fit: cover;
       }
       .sg-msg-avatar.sg-spacer { visibility: hidden; }
       .sg-msg-col { display: flex; flex-direction: column; min-width: 0; }
@@ -677,11 +690,9 @@
     const launcher = document.createElement('button');
     launcher.className = 'sg-launcher';
     launcher.id = 'sg-launcher';
-    launcher.setAttribute('aria-label', 'Open chat');
+    launcher.setAttribute('aria-label', '打开在线客服');
     launcher.innerHTML = `
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-      </svg>
+      <img class="sg-brand-logo sg-launcher-logo" src="${state.apiBase}/maitg-logo.png" alt="MAITG">
       <div class="sg-launcher-badge hidden" id="sg-badge">0</div>
     `;
     launcher.addEventListener('click', togglePanel);
@@ -694,9 +705,9 @@
     panel.id = 'sg-panel';
     panel.innerHTML = `
       <div class="sg-header">
-        <button class="sg-header-btn hidden" id="sg-back-btn" aria-label="Back">‹</button>
+        <button class="sg-header-btn hidden" id="sg-back-btn" aria-label="返回">‹</button>
         <div class="sg-header-title" id="sg-title"></div>
-        <button class="sg-header-btn" id="sg-close-btn" aria-label="Close">×</button>
+        <button class="sg-header-btn" id="sg-close-btn" aria-label="关闭">×</button>
       </div>
       <div id="sg-content"></div>
     `;
@@ -776,8 +787,8 @@
     teaser.innerHTML = `
       <div class="sg-teaser-title"></div>
       <div class="sg-teaser-text"></div>
-      <button class="sg-teaser-btn primary" id="sg-teaser-yes">I have a question</button>
-      <button class="sg-teaser-btn secondary" id="sg-teaser-no">No, thanks</button>
+      <button class="sg-teaser-btn primary" id="sg-teaser-yes">我有问题</button>
+      <button class="sg-teaser-btn secondary" id="sg-teaser-no">暂时不用</button>
     `;
     teaser.querySelector('.sg-teaser-title').textContent = state.title;
     teaser.querySelector('.sg-teaser-text').textContent = state.greeting;
@@ -813,25 +824,22 @@
     if (!at) return '';
     const d = new Date(String(at).includes('T') ? at : at + 'Z');
     if (isNaN(d)) return '';
-    let h = d.getHours();
+    const h = String(d.getHours()).padStart(2, '0');
     const m = String(d.getMinutes()).padStart(2, '0');
-    const ap = h >= 12 ? 'pm' : 'am';
-    h = h % 12 || 12;
-    return `${h}:${m} ${ap}`;
+    return `${h}:${m}`;
   }
 
   function showHome() {
     const content = document.getElementById('sg-content');
-    const initial = (state.title[0] || '?').toUpperCase();
     content.innerHTML = `
       <div class="sg-home">
         <div class="sg-home-hero">
-          <div class="sg-avatar">${initial}</div>
-          <div class="sg-home-sub">We'll respond as soon as we can.</div>
+          <div class="sg-avatar"><img class="sg-brand-logo" src="${state.apiBase}/maitg-logo.png" alt="MAITG"></div>
+          <div class="sg-home-sub">我们会尽快回复您。</div>
         </div>
         <div id="sg-recent-wrap"></div>
         <div class="sg-home-footer">
-          <button class="sg-newmsg-btn" id="sg-newmsg">Send a Message</button>
+          <button class="sg-newmsg-btn" id="sg-newmsg">发送消息</button>
         </div>
       </div>
     `;
@@ -847,7 +855,7 @@
     const item = document.createElement('button');
     item.className = 'sg-recent-item';
     item.innerHTML = `
-      <div class="sg-recent-avatar">${(state.title[0] || '?').toUpperCase()}</div>
+      <div class="sg-recent-avatar"><img class="sg-brand-logo" src="${state.apiBase}/maitg-logo.png" alt=""></div>
       <div class="sg-recent-main">
         <div class="sg-recent-name"></div>
         <div class="sg-recent-preview"></div>
@@ -866,7 +874,7 @@
     if (!wrap) return;
     const card = document.createElement('div');
     card.className = 'sg-recent';
-    card.innerHTML = '<div class="sg-recent-title">Recent Conversations</div>';
+    card.innerHTML = '<div class="sg-recent-title">最近会话</div>';
     wrap.replaceChildren(card);
 
     // Verified identity: one server call lists conversations for this email across
@@ -891,7 +899,7 @@
               recentItem(
                 card,
                 c.token,
-                c.last_body || (c.status === 'closed' ? 'Conversation ended' : 'New conversation'),
+                c.last_body || (c.status === 'closed' ? '会话已结束' : '新会话'),
                 c.last_at ? formatTime(c.last_at) : ''
               );
             });
@@ -923,7 +931,7 @@
         recentItem(
           card,
           token,
-          last ? last.body : (data.status === 'closed' ? 'Conversation ended' : 'New conversation'),
+          last ? last.body : (data.status === 'closed' ? '会话已结束' : '新会话'),
           last ? formatTime(last.at) : ''
         );
       } catch { /* skip unreachable conversations */ }
@@ -966,18 +974,18 @@
     content.innerHTML = `
       <div class="sg-form">
         <div class="sg-form-group">
-          <label class="sg-label" for="sg-name">Name</label>
-          <input type="text" id="sg-name" class="sg-input" placeholder="Your name" required>
+          <label class="sg-label" for="sg-name">姓名</label>
+          <input type="text" id="sg-name" class="sg-input" placeholder="请输入姓名" required>
         </div>
         <div class="sg-form-group">
-          <label class="sg-label" for="sg-email">Email</label>
-          <input type="email" id="sg-email" class="sg-input" placeholder="your@email.com" required>
+          <label class="sg-label" for="sg-email">邮箱</label>
+          <input type="email" id="sg-email" class="sg-input" placeholder="请输入邮箱" required>
         </div>
         <div class="sg-form-group">
-          <label class="sg-label" for="sg-message">Message</label>
-          <textarea id="sg-message" class="sg-textarea" placeholder="How can we help?" required></textarea>
+          <label class="sg-label" for="sg-message">留言</label>
+          <textarea id="sg-message" class="sg-textarea" placeholder="请描述您的问题" required></textarea>
         </div>
-        <button class="sg-submit-btn" id="sg-submit">Start</button>
+        <button class="sg-submit-btn" id="sg-submit">开始咨询</button>
         <div class="sg-error hidden" id="sg-error"></div>
       </div>
     `;
@@ -990,9 +998,9 @@
       const email = document.getElementById('sg-email').value.trim();
       const message = document.getElementById('sg-message').value.trim();
 
-      if (!name) return showError('Name is required', errorDiv);
-      if (!email || !email.includes('@')) return showError('Valid email is required', errorDiv);
-      if (!message) return showError('Message is required', errorDiv);
+      if (!name) return showError('请输入姓名', errorDiv);
+      if (!email || !email.includes('@')) return showError('请输入有效邮箱', errorDiv);
+      if (!message) return showError('请输入留言', errorDiv);
 
       submitBtn.disabled = true;
       errorDiv.classList.add('hidden');
@@ -1005,12 +1013,12 @@
         });
 
         if (response.status === 429) {
-          showError('Too many requests — try again later', errorDiv);
+          showError('请求过于频繁，请稍后再试', errorDiv);
           submitBtn.disabled = false;
           return;
         }
         if (!response.ok) {
-          showError('Failed to start conversation. Please try again.', errorDiv);
+          showError('创建会话失败，请重试', errorDiv);
           submitBtn.disabled = false;
           return;
         }
@@ -1030,7 +1038,7 @@
         startPolling();
       } catch (err) {
         warn('Error starting conversation:', err);
-        showError('Failed to start conversation. Please try again.', errorDiv);
+        showError('创建会话失败，请重试', errorDiv);
         submitBtn.disabled = false;
       }
     });
@@ -1049,9 +1057,9 @@
       <div class="sg-messages" id="sg-messages"></div>
       <div class="sg-input-row">
         <div class="sg-input-shell">
-          <textarea class="sg-input-row-textarea" id="sg-input" rows="1" placeholder="Type a message..."></textarea>
+          <textarea class="sg-input-row-textarea" id="sg-input" rows="1" placeholder="请输入消息..."></textarea>
         </div>
-        <button class="sg-send-btn" id="sg-send" aria-label="Send">
+        <button class="sg-send-btn" id="sg-send" aria-label="发送">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M2.7 20.9l18.6-8.4c.8-.4.8-1.5 0-1.9L2.7 2.2c-.7-.3-1.4.3-1.2 1l1.9 7.6c.1.3.3.5.6.6l8.2.9c.3 0 .3.5 0 .5l-8.2.9c-.3 0-.5.3-.6.6l-1.9 7.6c-.2.7.5 1.3 1.2 1z"/></svg>
         </button>
       </div>
@@ -1106,9 +1114,10 @@
 
       // Agent messages carry a small avatar on the last bubble of each group.
       if (!isOwn) {
-        const avatar = document.createElement('div');
+        const avatar = document.createElement('img');
         avatar.className = 'sg-msg-avatar' + (groupEnd ? '' : ' sg-spacer');
-        avatar.textContent = ((msg.sender || state.title)[0] || '?').toUpperCase();
+        avatar.src = `${state.apiBase}/maitg-logo.png`;
+        avatar.alt = '';
         msgEl.appendChild(avatar);
       }
 
@@ -1141,7 +1150,7 @@
     if (state.conversationStatus === 'closed' && msgs.length > 0) {
       const divider = document.createElement('div');
       divider.className = 'sg-divider';
-      divider.textContent = 'Conversation ended — send a message to reopen';
+      divider.textContent = '会话已结束，发送消息可重新开启';
       messagesDiv.appendChild(divider);
     }
 

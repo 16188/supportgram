@@ -14,6 +14,10 @@ test('VPS server exposes a health check', async (t) => {
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true });
 
+  const staticPage = await fetch(`http://127.0.0.1:${server.address().port}/test.html`);
+  assert.equal(staticPage.status, 200);
+  assert.match(await staticPage.text(), /Supportgram/);
+
   const invalidUrl = await fetch(`http://127.0.0.1:${server.address().port}/%E0%A4%A`);
   assert.equal(invalidUrl.status, 400);
 });

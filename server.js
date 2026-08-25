@@ -8,7 +8,7 @@ import messages from './api/c/[token]/messages.js';
 import resume from './api/resume.js';
 import telegram from './api/tg/[key].js';
 
-const publicDir = fileURLToPath(new URL('./public/', import.meta.url));
+const publicDir = fileURLToPath(new URL('./public', import.meta.url));
 const types = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',

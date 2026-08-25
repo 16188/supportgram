@@ -6,3 +6,4 @@
 - Added a dependency-free Node.js server for self-hosting.
 - Added Docker Compose installation and persistent local database storage.
 - Added GitHub Actions publishing to `ghcr.io/16188/supportgram`.
+- Fixed static assets such as `/widget.js` returning 404 from the VPS server.

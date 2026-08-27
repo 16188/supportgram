@@ -47,6 +47,9 @@ export const statements = [
     sender_label TEXT,
     body TEXT NOT NULL,
     tg_message_id INTEGER,
+    reply_to_message_id INTEGER,
+    reply_quote TEXT,
+    reactions TEXT NOT NULL DEFAULT '{}',
     media_type TEXT,
     media_path TEXT,
     media_name TEXT,
@@ -68,6 +71,7 @@ export const statements = [
   `CREATE INDEX IF NOT EXISTS idx_conversations_business_email ON conversations(business_id, customer_email)`,
   `CREATE INDEX IF NOT EXISTS idx_conversations_business_topic ON conversations(business_id, topic_id)`,
   `CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_messages_tg_message_id ON messages(tg_message_id)`,
   `CREATE INDEX IF NOT EXISTS idx_agents_business_active ON agents(business_id, active)`,
   `CREATE INDEX IF NOT EXISTS idx_blocked_visitors_business_ip ON blocked_visitors(business_id, ip_hash)`,
 ];
@@ -81,4 +85,7 @@ export const migrations = [
   `ALTER TABLE messages ADD COLUMN media_name TEXT`,
   `ALTER TABLE messages ADD COLUMN media_mime TEXT`,
   `ALTER TABLE messages ADD COLUMN media_size INTEGER`,
+  `ALTER TABLE messages ADD COLUMN reply_to_message_id INTEGER`,
+  `ALTER TABLE messages ADD COLUMN reply_quote TEXT`,
+  `ALTER TABLE messages ADD COLUMN reactions TEXT NOT NULL DEFAULT '{}'`,
 ];

@@ -26,6 +26,21 @@ function verifyIdentitySig(business, email, sig) {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const INPUT_LIMITS = { name: 100, email: 254, pageUrl: 2048, message: 4000 };
+
+export function conversationInputError({ name, email, pageUrl, message } = {}) {
+  if (!name || typeof name !== 'string' || !name.trim()) return 'name is required';
+  if (name.trim().length > INPUT_LIMITS.name) return 'name is too long (max 100 chars)';
+  if (!email || typeof email !== 'string') return 'valid email is required';
+  if (email.trim().length > INPUT_LIMITS.email) return 'email is too long (max 254 chars)';
+  if (!EMAIL_RE.test(email.trim())) return 'valid email is required';
+  if (!message || typeof message !== 'string' || !message.trim()) return 'message is required';
+  if (message.length > INPUT_LIMITS.message) return 'message too long (max 4000 chars)';
+  if (typeof pageUrl === 'string' && pageUrl.length > INPUT_LIMITS.pageUrl) {
+    return 'page URL is too long (max 2048 chars)';
+  }
+  return null;
+}
 
 function enforceOrigin(req, res, business) {
   const origin = req.headers.origin;
@@ -66,7 +81,7 @@ export default async function handler(req, res) {
     if (!business) return res.status(404).json({ error: 'unknown key' });
     if (!enforceOrigin(req, res, business)) return;
 
-    if (!email || !EMAIL_RE.test(String(email).trim())) {
+    if (!email || String(email).trim().length > INPUT_LIMITS.email || !EMAIL_RE.test(String(email).trim())) {
       return res.status(400).json({ error: 'valid email is required' });
     }
     if (!verifyIdentitySig(business, email, sig)) {
@@ -99,18 +114,8 @@ export default async function handler(req, res) {
 
   if (!enforceOrigin(req, res, business)) return;
 
-  if (!name || typeof name !== 'string' || !name.trim()) {
-    return res.status(400).json({ error: 'name is required' });
-  }
-  if (!email || typeof email !== 'string' || !EMAIL_RE.test(email.trim())) {
-    return res.status(400).json({ error: 'valid email is required' });
-  }
-  if (!message || typeof message !== 'string' || !message.trim()) {
-    return res.status(400).json({ error: 'message is required' });
-  }
-  if (message.length > 4000) {
-    return res.status(400).json({ error: 'message too long (max 4000 chars)' });
-  }
+  const inputError = conversationInputError({ name, email, pageUrl, message });
+  if (inputError) return res.status(400).json({ error: inputError });
 
   // Per-IP rate limit: max 5 new conversations per hour.
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';

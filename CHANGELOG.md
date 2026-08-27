@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-08-27
+
+- Added visitor field length limits, Beijing-hours-only widget visibility, and Telegram quoted reply and emoji reaction synchronization.
+
 ## 2026-08-25
 
 - Added one-command VPS deployment and rollback scripts that preserve the previously running Docker image without changing persistent data.

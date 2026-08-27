@@ -3,6 +3,7 @@
 
 import { getConversationByToken, getBusiness, getMessages } from '../db/index.js';
 import { config } from '../config.js';
+import { publicMessages } from './c/[token]/messages.js';
 
 function escapeHtml(text) {
   const map = {
@@ -51,24 +52,7 @@ export default async function handler(req, res) {
   }
 
   const businessNameEsc = escapeHtml(business.name);
-  const messagesJson = jsonForScript(
-    messages
-      .filter((m) => m.direction !== 'note')
-      .map((m) => ({
-        id: Number(m.id),
-        direction: m.direction,
-        sender: m.sender_label || (m.direction === 'in' ? conversation.customer_name : '客服'),
-        body: m.body,
-        media: m.media_path ? {
-          type: m.media_type,
-          name: m.media_name,
-          mime: m.media_mime,
-          size: Number(m.media_size) || 0,
-          url: `/api/c/${encodeURIComponent(token)}/media/${encodeURIComponent(String(m.media_path).split('/').pop())}`,
-        } : null,
-        at: m.created_at,
-      }))
-  );
+  const messagesJson = jsonForScript(publicMessages(messages, token, conversation.customer_name));
 
   const html = `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -157,6 +141,20 @@ export default async function handler(req, res) {
       object-fit: contain;
       background: #111;
     }
+    .reply-preview {
+      border-left: 3px solid currentColor;
+      margin-bottom: 7px;
+      padding: 5px 7px;
+      background: rgba(255, 255, 255, 0.16);
+      border-radius: 4px;
+      font-size: 12px;
+      opacity: 0.82;
+    }
+    .message.out .reply-preview { background: rgba(0, 0, 0, 0.06); }
+    .reply-sender { display: block; font-weight: 600; }
+    .reply-body { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .reactions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .reaction { padding: 1px 6px; border: 1px solid currentColor; border-radius: 10px; font-size: 12px; }
     .media-link { display: block; }
     .media-caption { margin-top: 6px; }
     @media (prefers-color-scheme: dark) {
@@ -265,6 +263,19 @@ export default async function handler(req, res) {
           div.appendChild(sender);
         }
 
+        if (msg.reply) {
+          const reply = document.createElement('div');
+          reply.className = 'reply-preview';
+          const sender = document.createElement('span');
+          sender.className = 'reply-sender';
+          sender.textContent = msg.reply.sender || (msg.reply.direction === 'in' ? '访客' : '客服');
+          const body = document.createElement('span');
+          body.className = 'reply-body';
+          body.textContent = msg.reply.body || '[消息]';
+          reply.append(sender, body);
+          div.appendChild(reply);
+        }
+
         if (msg.media) {
           const media = document.createElement(msg.media.type === 'image' ? 'img' : 'video');
           media.className = 'message-media';
@@ -291,6 +302,17 @@ export default async function handler(req, res) {
           text.className = msg.media ? 'media-caption' : '';
           text.textContent = msg.body;
           div.appendChild(text);
+        }
+        if (Array.isArray(msg.reactions) && msg.reactions.length > 0) {
+          const reactions = document.createElement('div');
+          reactions.className = 'reactions';
+          msg.reactions.forEach(({ emoji, count }) => {
+            const reaction = document.createElement('span');
+            reaction.className = 'reaction';
+            reaction.textContent = emoji + (count > 1 ? ' ' + count : '');
+            reactions.appendChild(reaction);
+          });
+          div.appendChild(reactions);
         }
         container.appendChild(div);
       });

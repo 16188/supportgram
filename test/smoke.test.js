@@ -3,9 +3,11 @@ import { once } from 'node:events';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import purge from '../api/cron/purge.js';
+import { conversationInputError } from '../api/conversations.js';
 import { byteRange } from '../api/c/[token]/media.js';
+import { publicMessages } from '../api/c/[token]/messages.js';
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, mediaRule } from '../lib/media.js';
-import { blockCommand, deleteCommand, undoCommand } from '../lib/relay.js';
+import { blockCommand, deleteCommand, telegramReactionEmojis, undoCommand } from '../lib/relay.js';
 import { createAppServer } from '../server.js';
 
 test('VPS server exposes a health check', async (t) => {
@@ -40,7 +42,11 @@ test('widget defaults to Chinese and uses the MAITG logo', async () => {
   const source = await readFile(new URL('../widget/src/widget.js', import.meta.url), 'utf8');
   assert.match(source, /联系我们/);
   assert.match(source, /我要咨询/);
-  assert.match(source, /客服在线时间（北京时间）：9:00-20:00，其他时间随机上线/);
+  assert.match(source, /客服在线时间（北京时间）：9:00-20:00/);
+  assert.match(source, /beijingHour >= 9 && beijingHour < 20/);
+  assert.match(source, /setInterval\(syncServiceAvailability, 60 \* 1000\)/);
+  assert.match(source, /maxlength="100"/);
+  assert.match(source, /maxlength="254"/);
   assert.match(source, /maitg-logo\.png/);
   assert.match(source, /launcher\.innerHTML = `\s*<svg/);
   assert.match(source, /newAgentMessages\.length > 0\) playNotificationSound\(\)/);
@@ -49,6 +55,46 @@ test('widget defaults to Chinese and uses the MAITG logo', async () => {
   assert.doesNotMatch(source, /createOscillator|linearRampToValueAtTime\(0\.06/);
   assert.match(source, /backgroundRate: 10000/);
   assert.doesNotMatch(source, /Send a Message|We'll respond as soon as we can/);
+});
+
+test('conversation fields enforce practical length limits', () => {
+  const valid = { name: '访客', email: 'user@example.com', pageUrl: 'https://example.com', message: '你好' };
+  assert.equal(conversationInputError(valid), null);
+  assert.match(conversationInputError({ ...valid, name: 'x'.repeat(101) }), /100/);
+  assert.match(conversationInputError({ ...valid, email: `${'x'.repeat(243)}@example.com` }), /254/);
+  assert.match(conversationInputError({ ...valid, pageUrl: `https://example.com/${'x'.repeat(2048)}` }), /2048/);
+});
+
+test('Telegram replies and reactions become website message metadata', async () => {
+  const messages = publicMessages([
+    { id: 1, direction: 'in', sender_label: '访客', body: '原消息', reactions: '{}', created_at: '2026-08-27' },
+    {
+      id: 2,
+      direction: 'out',
+      sender_label: '客服',
+      body: '引用回复',
+      reply_to_message_id: 1,
+      reply_quote: '选中的句子',
+      reactions: JSON.stringify({ 11: ['❤'], 22: ['❤', '👍'] }),
+      created_at: '2026-08-27',
+    },
+  ], 'token', '访客');
+  assert.equal(messages[1].reply.body, '选中的句子');
+  assert.deepEqual(messages[1].reactions, [{ emoji: '❤', count: 2 }, { emoji: '👍', count: 1 }]);
+  assert.deepEqual(telegramReactionEmojis([
+    { type: 'emoji', emoji: '👍' },
+    { type: 'emoji', emoji: '👍' },
+    { type: 'custom_emoji', custom_emoji_id: '1' },
+  ]), ['👍']);
+
+  const telegramApi = await readFile(new URL('../lib/telegramApi.js', import.meta.url), 'utf8');
+  const deploy = await readFile(new URL('../scripts/deploy.sh', import.meta.url), 'utf8');
+  const schema = await readFile(new URL('../db/schema.js', import.meta.url), 'utf8');
+  assert.match(telegramApi, /'message_reaction'/);
+  assert.match(deploy, /--sync-telegram/);
+  assert.match(schema, /reply_to_message_id INTEGER/);
+  assert.match(schema, /reply_quote TEXT/);
+  assert.match(schema, /reactions TEXT NOT NULL/);
 });
 
 test('automatic purge stays disabled', async () => {

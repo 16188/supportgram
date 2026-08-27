@@ -32,6 +32,11 @@
 
   let notificationAudio = null;
 
+  function isServiceOnline(now = Date.now()) {
+    const beijingHour = new Date(now + 8 * 60 * 60 * 1000).getUTCHours();
+    return beijingHour >= 9 && beijingHour < 20;
+  }
+
   const MEDIA_LIMITS = {
     'image/jpeg': 10 * 1024 * 1024,
     'image/png': 10 * 1024 * 1024,
@@ -259,6 +264,7 @@
         transform: scale(1.05);
         box-shadow: 0 4px 16px color-mix(in srgb, var(--sg-accent) 60%, transparent);
       }
+      .sg-launcher.sg-off-hours { display: none; }
       .sg-brand-logo {
         display: block;
         width: 100%;
@@ -595,6 +601,32 @@
       }
       .sg-message-out.sg-group-end .sg-message-bubble { border-bottom-left-radius: 5px; }
       .sg-message-bubble.sg-media-bubble { padding: 4px; overflow: hidden; }
+      .sg-reply-preview {
+        border-left: 3px solid currentColor;
+        border-radius: 4px;
+        margin-bottom: 6px;
+        padding: 5px 7px;
+        background: rgba(255, 255, 255, 0.18);
+        font-size: 12px;
+        opacity: 0.82;
+      }
+      .sg-message-out .sg-reply-preview { background: #f1f3f5; }
+      .sg-reply-sender { display: block; font-weight: 600; }
+      .sg-reply-body {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 220px;
+      }
+      .sg-reactions { display: flex; flex-wrap: wrap; gap: 3px; margin: 3px 4px 0; }
+      .sg-reaction {
+        padding: 1px 6px;
+        border: 1px solid #dde1e7;
+        border-radius: 10px;
+        background: white;
+        font-size: 12px;
+      }
       .sg-message-media {
         display: block;
         width: 100%;
@@ -818,7 +850,7 @@
   }
 
   function maybeShowTeaser() {
-    if (teaserDismissed() || state.isOpen || state.tokens.length > 0) return;
+    if (!isServiceOnline() || teaserDismissed() || state.isOpen || state.tokens.length > 0) return;
     try { sessionStorage.setItem(state.teaserKey, '1'); } catch { /* ignore */ }
 
     const teaser = document.createElement('div');
@@ -875,7 +907,7 @@
         <div class="sg-home-hero">
           <div class="sg-avatar"><img class="sg-brand-logo" src="${state.apiBase}/maitg-logo.png" alt="MAITG"></div>
           <div class="sg-home-sub">我们会尽快回复您。</div>
-          <div class="sg-home-hours">客服在线时间（北京时间）：9:00-20:00，其他时间随机上线</div>
+          <div class="sg-home-hours">客服在线时间（北京时间）：9:00-20:00</div>
         </div>
         <div id="sg-recent-wrap"></div>
         <div class="sg-home-footer">
@@ -1021,15 +1053,15 @@
       <div class="sg-form">
         <div class="sg-form-group">
           <label class="sg-label" for="sg-name">姓名</label>
-          <input type="text" id="sg-name" class="sg-input" placeholder="请输入姓名" required>
+          <input type="text" id="sg-name" class="sg-input" placeholder="请输入姓名" maxlength="100" required>
         </div>
         <div class="sg-form-group">
           <label class="sg-label" for="sg-email">邮箱</label>
-          <input type="email" id="sg-email" class="sg-input" placeholder="请输入邮箱" required>
+          <input type="email" id="sg-email" class="sg-input" placeholder="请输入邮箱" maxlength="254" required>
         </div>
         <div class="sg-form-group">
           <label class="sg-label" for="sg-message">留言</label>
-          <textarea id="sg-message" class="sg-textarea" placeholder="请描述您的问题" required></textarea>
+          <textarea id="sg-message" class="sg-textarea" placeholder="请描述您的问题" maxlength="4000" required></textarea>
         </div>
         <button class="sg-submit-btn" id="sg-submit">开始咨询</button>
         <div class="sg-error hidden" id="sg-error"></div>
@@ -1055,7 +1087,7 @@
         const response = await fetch(`${state.apiBase}/api/conversations`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: state.key, name, email, pageUrl: location.href, message }),
+          body: JSON.stringify({ key: state.key, name, email, pageUrl: location.href.slice(0, 2048), message }),
         });
 
         if (response.status === 429) {
@@ -1190,6 +1222,19 @@
       const bubble = document.createElement('div');
       bubble.className = 'sg-message-bubble';
 
+      if (msg.reply) {
+        const reply = document.createElement('div');
+        reply.className = 'sg-reply-preview';
+        const replySender = document.createElement('span');
+        replySender.className = 'sg-reply-sender';
+        replySender.textContent = msg.reply.sender || (msg.reply.direction === 'in' ? '访客' : '客服');
+        const replyBody = document.createElement('span');
+        replyBody.className = 'sg-reply-body';
+        replyBody.textContent = msg.reply.body || '[消息]';
+        reply.append(replySender, replyBody);
+        bubble.appendChild(reply);
+      }
+
       if (msg.media) {
         bubble.classList.add('sg-media-bubble');
         const mediaUrl = new URL(msg.media.url, state.apiBase).toString();
@@ -1220,6 +1265,18 @@
         bubble.appendChild(caption);
       }
       col.appendChild(bubble);
+
+      if (Array.isArray(msg.reactions) && msg.reactions.length > 0) {
+        const reactions = document.createElement('div');
+        reactions.className = 'sg-reactions';
+        msg.reactions.forEach(({ emoji, count }) => {
+          const reaction = document.createElement('span');
+          reaction.className = 'sg-reaction';
+          reaction.textContent = `${emoji}${count > 1 ? ` ${count}` : ''}`;
+          reactions.appendChild(reaction);
+        });
+        col.appendChild(reactions);
+      }
 
       if (groupEnd && msg.at) {
         const time = document.createElement('div');
@@ -1290,7 +1347,7 @@
             key: state.key,
             name: state.name,
             email: state.email,
-            pageUrl: location.href,
+            pageUrl: location.href.slice(0, 2048),
             message: text,
           }),
         });
@@ -1450,6 +1507,7 @@
 
   function startPolling() {
     stopPolling();
+    if (!isServiceOnline()) return;
     const poll = () => fetchMessages();
     state.pollingInterval = setInterval(
       poll,
@@ -1466,6 +1524,10 @@
   }
 
   function togglePanel() {
+    if (!isServiceOnline()) {
+      syncServiceAvailability();
+      return;
+    }
     state.isOpen = !state.isOpen;
     const panel = document.getElementById('sg-panel');
 
@@ -1494,8 +1556,28 @@
   }
 
   function handleVisibilityChange() {
-    if (state.token) {
+    if (isServiceOnline() && state.token) {
       fetchMessages();
+      startPolling();
+    }
+  }
+
+  function syncServiceAvailability() {
+    const online = isServiceOnline();
+    const launcher = document.getElementById('sg-launcher');
+    const panel = document.getElementById('sg-panel');
+    if (launcher) launcher.classList.toggle('sg-off-hours', !online);
+
+    if (!online) {
+      if (state.teaserEl) {
+        state.teaserEl.remove();
+        state.teaserEl = null;
+        updateBadge();
+      }
+      if (panel) panel.classList.add('hidden');
+      state.isOpen = false;
+      stopPolling();
+    } else if (state.token && !state.pollingInterval) {
       startPolling();
     }
   }
@@ -1512,13 +1594,12 @@
     // Resume the most recent conversation as the active one for background unread polling.
     if (state.tokens.length > 0) {
       state.token = state.tokens[state.tokens.length - 1];
-      state.view = 'chat';
-      fetchMessages();
-      startPolling();
-      state.view = 'home';
     }
 
+    syncServiceAvailability();
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    setInterval(syncServiceAvailability, 60 * 1000);
     setTimeout(maybeShowTeaser, 2500);
 
     // Public runtime API for host apps (login/logout without a page reload).

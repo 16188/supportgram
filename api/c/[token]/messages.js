@@ -41,6 +41,40 @@ function mediaPayload(message, token) {
   };
 }
 
+function reactionPayload(raw) {
+  let byActor = {};
+  try { byActor = JSON.parse(raw || '{}'); } catch { /* ignore invalid legacy data */ }
+  const counts = new Map();
+  Object.values(byActor).flat().forEach((emoji) => {
+    counts.set(emoji, (counts.get(emoji) || 0) + 1);
+  });
+  return [...counts].map(([emoji, count]) => ({ emoji, count }));
+}
+
+export function publicMessages(rows, token, customerName = '访客') {
+  const byId = new Map(rows.map((message) => [Number(message.id), message]));
+  return rows
+    .filter((message) => message.direction !== 'note')
+    .map((message) => {
+      const replied = byId.get(Number(message.reply_to_message_id));
+      return {
+        id: Number(message.id),
+        direction: message.direction,
+        sender: message.sender_label,
+        body: message.body,
+        reply: replied ? {
+          id: Number(replied.id),
+          direction: replied.direction,
+          sender: replied.sender_label || (replied.direction === 'in' ? customerName : '客服'),
+          body: message.reply_quote || replied.body,
+        } : null,
+        reactions: reactionPayload(message.reactions),
+        media: mediaPayload(message, token),
+        at: message.created_at,
+      };
+    });
+}
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     if (req.headers.origin) {
@@ -80,16 +114,8 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     const after = parseInt(req.query.after, 10) || 0;
     const all = await getMessages(conversation.id);
-    const messages = all
-      .filter((m) => m.direction !== 'note' && Number(m.id) > after)
-      .map((m) => ({
-        id: Number(m.id),
-        direction: m.direction,
-        sender: m.sender_label,
-        body: m.body,
-        media: mediaPayload(m, token),
-        at: m.created_at,
-      }));
+    const messages = publicMessages(all, token, conversation.customer_name)
+      .filter((message) => message.id > after);
 
     // Fire-and-forget update last_seen_at to mark customer as online.
     try {

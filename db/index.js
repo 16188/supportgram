@@ -220,15 +220,17 @@ export async function unblockVisitor(businessId, email) {
 export async function addMessage(fields) {
   const result = await q(
     `INSERT INTO messages
-       (conversation_id, direction, sender_label, body, tg_message_id,
+       (conversation_id, direction, sender_label, body, tg_message_id, reply_to_message_id, reply_quote,
         media_type, media_path, media_name, media_mime, media_size)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       fields.conversation_id,
       fields.direction,
       fields.sender_label || null,
       fields.body,
       fields.tg_message_id || null,
+      fields.reply_to_message_id || null,
+      fields.reply_quote || null,
       fields.media_type || null,
       fields.media_path || null,
       fields.media_name || null,
@@ -244,6 +246,9 @@ export async function addMessage(fields) {
     sender_label: fields.sender_label || null,
     body: fields.body,
     tg_message_id: fields.tg_message_id || null,
+    reply_to_message_id: fields.reply_to_message_id || null,
+    reply_quote: fields.reply_quote || null,
+    reactions: '{}',
     media_type: fields.media_type || null,
     media_path: fields.media_path || null,
     media_name: fields.media_name || null,
@@ -251,6 +256,38 @@ export async function addMessage(fields) {
     media_size: fields.media_size || null,
     created_at: new Date().toISOString(),
   };
+}
+
+export async function setMessageTelegramId(messageId, telegramMessageId) {
+  await q('UPDATE messages SET tg_message_id = ? WHERE id = ?', [telegramMessageId, messageId]);
+}
+
+export async function getMessageByTelegramId(conversationId, telegramMessageId) {
+  return firstRow(await q(
+    'SELECT * FROM messages WHERE conversation_id = ? AND tg_message_id = ? LIMIT 1',
+    [conversationId, telegramMessageId]
+  ));
+}
+
+export async function setMessageReactionsByBusiness(businessId, telegramMessageId, actorId, emojis) {
+  const message = firstRow(await q(
+    `SELECT m.id, m.reactions FROM messages m
+     JOIN conversations c ON c.id = m.conversation_id
+     WHERE c.business_id = ? AND m.tg_message_id = ? LIMIT 1`,
+    [businessId, telegramMessageId]
+  ));
+  if (!message) return false;
+
+  let reactions = {};
+  try {
+    const parsed = JSON.parse(message.reactions || '{}');
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) reactions = parsed;
+  } catch { /* reset invalid legacy data */ }
+  if (emojis.length > 0) reactions[String(actorId)] = [...new Set(emojis)];
+  else delete reactions[String(actorId)];
+  // ponytail: concurrent reaction webhooks are last-write-wins; normalize if collisions appear in practice.
+  await q('UPDATE messages SET reactions = ? WHERE id = ?', [JSON.stringify(reactions), message.id]);
+  return true;
 }
 
 export async function editAgentMessageByBusiness(businessId, telegramMessageId, body) {

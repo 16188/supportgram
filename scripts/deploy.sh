@@ -16,4 +16,5 @@ fi
 git pull --ff-only
 docker compose pull
 docker compose up -d --force-recreate --wait --wait-timeout 60
+docker compose run --rm supportgram npm run seed -- --sync-telegram
 docker compose ps

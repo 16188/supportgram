@@ -3,7 +3,11 @@ import { once } from 'node:events';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import purge from '../api/cron/purge.js';
-import { conversationInputError } from '../api/conversations.js';
+import {
+  clientIp,
+  conversationInputError,
+  NEW_CONVERSATION_WINDOW_MINUTES,
+} from '../api/conversations.js';
 import { byteRange } from '../api/c/[token]/media.js';
 import { publicMessages } from '../api/c/[token]/messages.js';
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, mediaRule } from '../lib/media.js';
@@ -63,6 +67,27 @@ test('conversation fields enforce practical length limits', () => {
   assert.match(conversationInputError({ ...valid, name: 'x'.repeat(101) }), /100/);
   assert.match(conversationInputError({ ...valid, email: `${'x'.repeat(243)}@example.com` }), /254/);
   assert.match(conversationInputError({ ...valid, pageUrl: `https://example.com/${'x'.repeat(2048)}` }), /2048/);
+  assert.match(conversationInputError({ ...valid, website: 'https://spam.example' }), /invalid request/);
+});
+
+test('new conversations use a trusted real IP and a ten-minute limit', async () => {
+  assert.equal(NEW_CONVERSATION_WINDOW_MINUTES, 10);
+  assert.equal(clientIp({
+    headers: { 'x-real-ip': '203.0.113.7', 'x-forwarded-for': '198.51.100.8' },
+    socket: { remoteAddress: '127.0.0.1' },
+  }), '203.0.113.7');
+  assert.equal(clientIp({
+    headers: { 'x-real-ip': '104.21.25.251', 'cf-connecting-ip': '203.0.113.9' },
+    socket: { remoteAddress: '127.0.0.1' },
+  }), '203.0.113.9');
+  assert.equal(clientIp({
+    headers: { 'x-real-ip': '198.51.100.10', 'cf-connecting-ip': '203.0.113.11' },
+    socket: { remoteAddress: '127.0.0.1' },
+  }), '198.51.100.10');
+
+  const widget = await readFile(new URL('../widget/src/widget.js', import.meta.url), 'utf8');
+  assert.match(widget, /name="website"/);
+  assert.match(widget, /website: document\.getElementById\('sg-website'\)\.value/);
 });
 
 test('Telegram replies and reactions become website message metadata', async () => {
@@ -119,6 +144,7 @@ test('automatic purge stays disabled', async () => {
 test('Docker stores the database beside the deployment files', async () => {
   const compose = await readFile(new URL('../docker-compose.yml', import.meta.url), 'utf8');
   assert.match(compose, /\.\/data:\/app\/data/);
+  assert.match(compose, /127\.0\.0\.1:3000:3000/);
   assert.doesNotMatch(compose, /supportgram_data/);
 });
 

@@ -1051,6 +1051,7 @@
     const content = document.getElementById('sg-content');
     content.innerHTML = `
       <div class="sg-form">
+        <input type="text" name="website" id="sg-website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px">
         <div class="sg-form-group">
           <label class="sg-label" for="sg-name">姓名</label>
           <input type="text" id="sg-name" class="sg-input" placeholder="请输入姓名" maxlength="100" required>
@@ -1075,6 +1076,7 @@
       const name = document.getElementById('sg-name').value.trim();
       const email = document.getElementById('sg-email').value.trim();
       const message = document.getElementById('sg-message').value.trim();
+      const website = document.getElementById('sg-website').value;
 
       if (!name) return showError('请输入姓名', errorDiv);
       if (!email || !email.includes('@')) return showError('请输入有效邮箱', errorDiv);
@@ -1087,7 +1089,7 @@
         const response = await fetch(`${state.apiBase}/api/conversations`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: state.key, name, email, pageUrl: location.href.slice(0, 2048), message }),
+          body: JSON.stringify({ key: state.key, name, email, pageUrl: location.href.slice(0, 2048), message, website }),
         });
 
         if (response.status === 429) {
@@ -1133,6 +1135,7 @@
     content.innerHTML = `
       <div class="sg-messages" id="sg-messages"></div>
       <div class="sg-input-row">
+        <input type="text" name="website" id="sg-website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px">
         <button class="sg-attach-btn" id="sg-attach" aria-label="发送图片或视频" title="${state.token ? '发送图片或视频' : '请先发送一条文字消息'}" ${state.token ? '' : 'disabled'}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.6l-8.9 8.9a6 6 0 01-8.5-8.5l9.6-9.6a4 4 0 015.7 5.7l-9.6 9.6a2 2 0 01-2.8-2.8l8.9-8.9"/></svg>
         </button>
@@ -1349,6 +1352,7 @@
             email: state.email,
             pageUrl: location.href.slice(0, 2048),
             message: text,
+            website: document.getElementById('sg-website').value,
           }),
         });
         if (!response.ok) {

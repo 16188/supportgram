@@ -2,6 +2,7 @@
 // GET  /api/conversations?key&email&sig — verified-identity conversation list.
 
 import crypto from 'crypto';
+import { BlockList, isIP } from 'node:net';
 import {
   getBusinessByKey,
   countRecentConversationsByIp,
@@ -27,8 +28,39 @@ function verifyIdentitySig(business, email, sig) {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const INPUT_LIMITS = { name: 100, email: 254, pageUrl: 2048, message: 4000 };
+export const NEW_CONVERSATION_WINDOW_MINUTES = 10;
 
-export function conversationInputError({ name, email, pageUrl, message } = {}) {
+const cloudflareIps = new BlockList();
+for (const cidr of [
+  '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
+  '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
+  '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+  '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22', '2400:cb00::/32',
+  '2606:4700::/32', '2803:f800::/32', '2405:b500::/32', '2405:8100::/32',
+  '2a06:98c0::/29', '2c0f:f248::/32',
+]) {
+  const [address, prefix] = cidr.split('/');
+  cloudflareIps.addSubnet(address, Number(prefix), isIP(address) === 6 ? 'ipv6' : 'ipv4');
+}
+
+const startingIps = new Set();
+
+function validIp(value) {
+  let ip = String(value || '').trim();
+  if (ip.startsWith('::ffff:') && isIP(ip.slice(7)) === 4) ip = ip.slice(7);
+  return isIP(ip) ? ip : '';
+}
+
+export function clientIp(req) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',').at(-1);
+  const proxyIp = validIp(req.headers['x-real-ip']) || validIp(forwarded) || validIp(req.socket?.remoteAddress);
+  const cloudflareIp = validIp(req.headers['cf-connecting-ip']);
+  const proxyType = isIP(proxyIp) === 6 ? 'ipv6' : 'ipv4';
+  return cloudflareIp && proxyIp && cloudflareIps.check(proxyIp, proxyType) ? cloudflareIp : proxyIp;
+}
+
+export function conversationInputError({ name, email, pageUrl, message, website } = {}) {
+  if (website) return 'invalid request';
   if (!name || typeof name !== 'string' || !name.trim()) return 'name is required';
   if (name.trim().length > INPUT_LIMITS.name) return 'name is too long (max 100 chars)';
   if (!email || typeof email !== 'string') return 'valid email is required';
@@ -101,7 +133,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'method not allowed' });
   }
 
-  const { key, name, email, pageUrl, message } = req.body || {};
+  const { key, name, email, pageUrl, message, website } = req.body || {};
 
   if (!key || typeof key !== 'string') {
     return res.status(400).json({ error: 'missing key' });
@@ -114,23 +146,28 @@ export default async function handler(req, res) {
 
   if (!enforceOrigin(req, res, business)) return;
 
-  const inputError = conversationInputError({ name, email, pageUrl, message });
+  const inputError = conversationInputError({ name, email, pageUrl, message, website });
   if (inputError) return res.status(400).json({ error: inputError });
 
-  // Per-IP rate limit: max 5 new conversations per hour.
-  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';
+  const ip = clientIp(req);
   const ipHash = crypto.createHash('sha256').update(ip).digest('hex').slice(0, 16);
+  const rateKey = `${business.id}:${ipHash}`;
 
-  if (await isVisitorBlocked(business.id, email.trim(), ipHash)) {
-    return res.status(403).json({ error: 'unable to start conversation' });
-  }
-
-  const recent = await countRecentConversationsByIp(business.id, ipHash, 60);
-  if (recent >= 5) {
+  if (startingIps.has(rateKey)) {
     return res.status(429).json({ error: 'too many conversations, try again later' });
   }
+  startingIps.add(rateKey);
 
   try {
+    if (await isVisitorBlocked(business.id, email.trim(), ipHash)) {
+      return res.status(403).json({ error: 'unable to start conversation' });
+    }
+
+    const recent = await countRecentConversationsByIp(business.id, ipHash, NEW_CONVERSATION_WINDOW_MINUTES);
+    if (recent >= 1) {
+      return res.status(429).json({ error: 'too many conversations, try again later' });
+    }
+
     const conversation = await startConversation({
       business,
       name: name.trim(),
@@ -143,5 +180,7 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('conversations: startConversation failed:', err);
     return res.status(500).json({ error: 'internal error' });
+  } finally {
+    startingIps.delete(rateKey);
   }
 }

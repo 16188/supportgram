@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-09-07
+
+- Added trusted real-IP detection for direct and Cloudflare traffic, limited each IP to one new conversation per 10 minutes, and added an invisible honeypot field against automated spam.
+- Restricted the Docker application port to the VPS loopback interface.
+
 ## 2026-08-27
 
 - Added visitor field length limits, Beijing-hours-only widget visibility, and Telegram quoted reply and emoji reaction synchronization.

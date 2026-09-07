@@ -31,6 +31,7 @@
   };
 
   let notificationAudio = null;
+  const NEW_CONVERSATION_LIMIT_MESSAGE = '10分钟内只允许开启一个聊天窗口';
 
   function isServiceOnline(now = Date.now()) {
     const beijingHour = new Date(now + 8 * 60 * 60 * 1000).getUTCHours();
@@ -1093,7 +1094,7 @@
         });
 
         if (response.status === 429) {
-          showError('请求过于频繁，请稍后再试', errorDiv);
+          showError(NEW_CONVERSATION_LIMIT_MESSAGE, errorDiv);
           submitBtn.disabled = false;
           return;
         }
@@ -1355,6 +1356,10 @@
             website: document.getElementById('sg-website').value,
           }),
         });
+        if (response.status === 429) {
+          textarea.value = text;
+          window.alert(NEW_CONVERSATION_LIMIT_MESSAGE);
+        }
         if (!response.ok) {
           state.messages = state.messages.filter((m) => m.id !== optimisticMsg.id);
           renderMessages();

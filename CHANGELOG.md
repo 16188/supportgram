@@ -3,6 +3,7 @@
 ## 2026-09-07
 
 - Added trusted real-IP detection for direct and Cloudflare traffic, limited each IP to one new conversation per 10 minutes, and added an invisible honeypot field against automated spam.
+- Added the real visitor IP to Telegram's new-conversation summary and clarified the 10-minute limit message shown to visitors.
 - Restricted the Docker application port to the VPS loopback interface.
 
 ## 2026-08-27

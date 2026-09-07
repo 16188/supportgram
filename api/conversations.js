@@ -154,7 +154,7 @@ export default async function handler(req, res) {
   const rateKey = `${business.id}:${ipHash}`;
 
   if (startingIps.has(rateKey)) {
-    return res.status(429).json({ error: 'too many conversations, try again later' });
+    return res.status(429).json({ error: '10分钟内只允许开启一个聊天窗口' });
   }
   startingIps.add(rateKey);
 
@@ -165,7 +165,7 @@ export default async function handler(req, res) {
 
     const recent = await countRecentConversationsByIp(business.id, ipHash, NEW_CONVERSATION_WINDOW_MINUTES);
     if (recent >= 1) {
-      return res.status(429).json({ error: 'too many conversations, try again later' });
+      return res.status(429).json({ error: '10分钟内只允许开启一个聊天窗口' });
     }
 
     const conversation = await startConversation({
@@ -174,6 +174,7 @@ export default async function handler(req, res) {
       email: email.trim(),
       pageUrl: typeof pageUrl === 'string' ? pageUrl : null,
       firstMessage: message,
+      ip,
       ipHash,
     });
     return res.status(200).json({ token: conversation.resume_token, status: 'open' });

@@ -56,6 +56,8 @@ test('widget defaults to Chinese and uses the MAITG logo', async () => {
   assert.match(source, /newAgentMessages\.length > 0\) playNotificationSound\(\)/);
   assert.match(source, /new Audio\(`\$\{state\.apiBase\}\/voice\.mp3`\)/);
   assert.match(source, /notificationAudio\.volume = 1/);
+  assert.match(source, /10分钟内只允许开启一个聊天窗口/);
+  assert.doesNotMatch(source, /请求过于频繁，请稍后再试/);
   assert.doesNotMatch(source, /createOscillator|linearRampToValueAtTime\(0\.06/);
   assert.match(source, /backgroundRate: 10000/);
   assert.doesNotMatch(source, /Send a Message|We'll respond as soon as we can/);
@@ -86,8 +88,10 @@ test('new conversations use a trusted real IP and a ten-minute limit', async () 
   }), '198.51.100.10');
 
   const widget = await readFile(new URL('../widget/src/widget.js', import.meta.url), 'utf8');
+  const conversationsApi = await readFile(new URL('../api/conversations.js', import.meta.url), 'utf8');
   assert.match(widget, /name="website"/);
   assert.match(widget, /website: document\.getElementById\('sg-website'\)\.value/);
+  assert.match(conversationsApi, /10分钟内只允许开启一个聊天窗口/);
 });
 
 test('Telegram replies and reactions become website message metadata', async () => {
@@ -191,6 +195,7 @@ test('agent message correction and blacklist commands are explicit', async () =>
   assert.equal(blockCommand('/block confirm'), null);
 
   const relay = await readFile(new URL('../lib/relay.js', import.meta.url), 'utf8');
+  assert.match(relay, /`IP：\$\{esc\(ip \|\| '—'\)\}`/);
   assert.match(relay, /update\?\.edited_message/);
   assert.match(relay, /deleteAgentMessage/);
   assert.ok(relay.indexOf('if (edited)') < relay.indexOf('if (!msg.message_thread_id)'));
